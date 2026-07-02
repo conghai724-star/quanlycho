@@ -75,6 +75,7 @@
         </div>
 
         <form action="<?php echo BASE_URL; ?>home/login" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo security::getToken(); ?>">
             <!-- Username Input -->
             <div class="form-group">
                 <label class="form-label" for="username">Tên đăng nhập</label>

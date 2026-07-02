@@ -8,6 +8,20 @@ class router {
     protected $params = [];
 
     public function __construct() {
+        // Tự động chặn và xác thực token CSRF đối với tất cả các request thay đổi trạng thái (POST, PUT, DELETE)
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
+            if (!security::validateToken()) {
+                http_response_code(403);
+                echo "<div style='font-family: \"Inter\", sans-serif; text-align: center; padding: 50px;'>";
+                echo "<h1 style='color: #e74c3c; font-size: 32px;'>403 Forbidden</h1>";
+                echo "<p style='color: #666; font-size: 16px;'>Yêu cầu bị từ chối do mã xác thực bảo mật (CSRF Token) không hợp lệ hoặc đã hết hạn.</p>";
+                echo "<a href='javascript:history.back()' style='color: #1ABB9C; text-decoration: none; font-weight: 600;'>Quay lại trang trước</a>";
+                echo "</div>";
+                exit();
+            }
+        }
+
         $url = $this->parseUrl();
 
         // 1. Xác định Controller (mặc định là homeController)

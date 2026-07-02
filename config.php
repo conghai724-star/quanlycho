@@ -33,5 +33,11 @@ define('DB_PASS', '');
 
 // Bắt đầu Session nếu chưa chạy
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+    session_start([
+        'cookie_lifetime' => 0,          // Hết hạn khi đóng trình duyệt
+        'cookie_httponly' => true,       // Chống đánh cắp session bằng JS
+        'cookie_secure'   => $isSecure,  // Chỉ truyền qua HTTPS nếu có
+        'cookie_samesite' => 'Lax'       // Bảo vệ CSRF cơ bản
+    ]);
 }

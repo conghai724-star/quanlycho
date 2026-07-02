@@ -20,6 +20,7 @@
         <?php endif; ?>
 
         <form action="<?php echo BASE_URL; ?>admin/trader_add" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo security::getToken(); ?>">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <!-- Mã tiểu thương -->
                 <div class="form-group">

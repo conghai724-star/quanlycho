@@ -11,6 +11,7 @@
     </div>
     <div class="card-body" style="padding: 24px;">
         <form action="<?php echo BASE_URL; ?>admin/utility_add" method="POST">
+            <input type="hidden" name="csrf_token" value="<?php echo security::getToken(); ?>">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <!-- Kỳ chốt số -->
                 <div class="form-group">
