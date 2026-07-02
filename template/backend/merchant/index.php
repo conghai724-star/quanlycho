@@ -14,10 +14,10 @@
     
     <!-- Xuất file Excel/PDF và Thêm mới -->
     <div style="display: flex; gap: 8px;">
-        <button class="btn btn-outline" onclick="exportData('excel')" style="height: 36px; display: inline-flex; align-items: center; gap: 6px;" title="Xuất dữ liệu ra file Excel">
+        <button class="btn btn-outline" onclick="App.merchant.exportData('excel')" style="height: 36px; display: inline-flex; align-items: center; gap: 6px;" title="Xuất dữ liệu ra file Excel">
             <i class="fa-regular fa-file-excel text-success"></i> Xuất Excel
         </button>
-        <button class="btn btn-outline" onclick="exportData('pdf')" style="height: 36px; display: inline-flex; align-items: center; gap: 6px;" title="Xuất dữ liệu ra file PDF">
+        <button class="btn btn-outline" onclick="App.merchant.exportData('pdf')" style="height: 36px; display: inline-flex; align-items: center; gap: 6px;" title="Xuất dữ liệu ra file PDF">
             <i class="fa-regular fa-file-pdf text-danger"></i> Xuất PDF
         </button>
         <a href="<?php echo BASE_URL; ?>admin/trader_add" class="btn btn-primary" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: white;">
@@ -83,7 +83,7 @@
                                 </td>
                                 <td style="padding: 14px 16px; text-align: center;">
                                     <?php if ($certVal): ?>
-                                        <button class="btn btn-ghost btn-sm" onclick="viewLicense('<?php echo htmlspecialchars($trader['fullname']); ?>')" style="padding: 4px; color: var(--primary);" title="Xem giấy phép kinh doanh">
+                                        <button class="btn btn-ghost btn-sm" onclick="App.merchant.viewLicense('<?php echo htmlspecialchars($trader['fullname']); ?>')" style="padding: 4px; color: var(--primary);" title="Xem giấy phép kinh doanh">
                                             <i class="fa-regular fa-id-card" style="font-size: 16px;"></i>
                                         </button>
                                     <?php else: ?>
@@ -104,7 +104,7 @@
                                         <a href="<?php echo BASE_URL; ?>admin/trader_edit/<?php echo $trader['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none;" title="Sửa">
                                             <i class="fa-solid fa-pen-to-square"></i>
                                         </a>
-                                        <button class="btn btn-ghost btn-sm" onclick="confirmDelete(<?php echo $trader['id']; ?>, '<?php echo htmlspecialchars($trader['fullname']); ?>')" style="padding: 4px 8px; font-size: 11px; color: #EA4335;" title="Xóa">
+                                        <button class="btn btn-ghost btn-sm" onclick="App.merchant.confirmDelete(<?php echo $trader['id']; ?>, '<?php echo htmlspecialchars($trader['fullname']); ?>')" style="padding: 4px 8px; font-size: 11px; color: #EA4335;" title="Xóa">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                     </div>
@@ -122,99 +122,4 @@
     </div>
 </div>
 
-<!-- Nạp SweetAlert2 JS CDN -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<!-- Script xử lý Toast, Xác nhận xóa, Xem giấy phép và Xuất file -->
-<script>
-    // 1. Hàm xem giấy phép kinh doanh (Mockup Modal)
-    function viewLicense(name) {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        Swal.fire({
-            title: 'Hồ sơ Giấy phép Kinh doanh',
-            text: 'Đang hiển thị Giấy phép hộ kinh doanh của tiểu thương: ' + name,
-            imageUrl: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=500&auto=format&fit=crop',
-            imageWidth: 400,
-            imageHeight: 250,
-            imageAlt: 'Giấy chứng nhận đăng ký hộ kinh doanh',
-            confirmButtonText: 'Đóng',
-            confirmButtonColor: '#1ABB9C',
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        });
-    }
-
-    // 2. Hàm giả lập xuất dữ liệu
-    function exportData(type) {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        Swal.fire({
-            title: 'Đang trích xuất dữ liệu...',
-            text: 'Hệ thống đang chuẩn bị xuất danh sách tiểu thương ra file ' + type.toUpperCase(),
-            timer: 1500,
-            timerProgressBar: true,
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623',
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        }).then(() => {
-            Swal.fire({
-                icon: 'success',
-                title: 'Xuất file thành công!',
-                text: 'File ' + type.toUpperCase() + ' đã được tải về máy của bạn.',
-                confirmButtonColor: '#1ABB9C',
-                background: isDark ? '#1a2332' : '#ffffff',
-                color: isDark ? '#ffffff' : '#0f1623'
-            });
-        });
-    }
-
-    // 3. Hàm hiển thị Dialog xác nhận xóa
-    function confirmDelete(id, name) {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        Swal.fire({
-            title: 'Xác nhận xóa?',
-            text: "Bạn có chắc chắn muốn xóa tiểu thương '" + name + "' khỏi hệ thống? Hành động này không thể hoàn tác!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#EA4335',
-            cancelButtonColor: '#a0aec0',
-            confirmButtonText: 'Đồng ý xóa',
-            cancelButtonText: 'Hủy bỏ',
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = '<?php echo BASE_URL; ?>admin/trader_delete/' + id;
-            }
-        });
-    }
-
-    // 4. Tự động hiển thị Toast thông báo
-    document.addEventListener('DOMContentLoaded', function() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const toastConfig = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        });
-
-        <?php if ($success = session::get('success_message')): session::delete('success_message'); ?>
-            toastConfig.fire({
-                icon: 'success',
-                title: '<?php echo $success; ?>'
-            });
-        <?php endif; ?>
-
-        <?php if ($errorMsg = session::get('error_message')): session::delete('error_message'); ?>
-            toastConfig.fire({
-                icon: 'error',
-                title: '<?php echo $errorMsg; ?>'
-            });
-        <?php endif; ?>
-    });
-</script>

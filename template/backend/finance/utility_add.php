@@ -25,7 +25,7 @@
                 <!-- Sạp chợ ghi nhận -->
                 <div class="form-group">
                     <label class="form-label" for="stall_code" style="font-weight: 500;">Chọn Sạp chợ <span style="color: var(--red)">*</span></label>
-                    <select id="stall_code" name="stall_code" class="form-control" onchange="updateOldValues(this.value)" required>
+                    <select id="stall_code" name="stall_code" class="form-control" onchange="App.finance.updateOldValues(this.value)" required>
                         <option value="">-- Chọn sạp --</option>
                         <option value="SẠP-A01">SẠP-A01 (Khu A)</option>
                         <option value="SẠP-B01">SẠP-B01 (Khu B)</option>
@@ -75,18 +75,4 @@
     </div>
 </div>
 
-<script>
-    // Hàm giả lập thay đổi chỉ số cũ dựa trên sạp được chọn để làm mockup như thật
-    function updateOldValues(stallCode) {
-        if (stallCode === 'SẠP-A01') {
-            document.getElementById('old_electric').value = 1690;
-            document.getElementById('old_water').value = 255;
-        } else if (stallCode === 'SẠP-B01') {
-            document.getElementById('old_electric').value = 3450;
-            document.getElementById('old_water').value = 432;
-        } else {
-            document.getElementById('old_electric').value = 0;
-            document.getElementById('old_water').value = 0;
-        }
-    }
-</script>
+

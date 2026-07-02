@@ -44,8 +44,8 @@
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
     <!-- Nút chuyển đổi Tab -->
     <div class="segmented" role="radiogroup" style="max-width: 320px;">
-        <label><input type="radio" name="view-mode" value="table" checked onclick="switchView('table')"><span>Danh sách bảng</span></label>
-        <label><input type="radio" name="view-mode" value="map" onclick="switchView('map')"><span>Sơ đồ sạp chợ (Map)</span></label>
+        <label><input type="radio" name="view-mode" value="table" checked onclick="App.stall.switchView('table')"><span>Danh sách bảng</span></label>
+        <label><input type="radio" name="view-mode" value="map" onclick="App.stall.switchView('map')"><span>Sơ đồ sạp chợ (Map)</span></label>
     </div>
     
     <div style="display: flex; gap: 8px;">
@@ -152,19 +152,19 @@
             <div>
                 <h4 style="font-size: 14px; font-weight: 600; color: var(--text-heading); margin-bottom: 12px;"><i class="fa-solid fa-shirt text-primary me-2"></i> Khu A (Thời trang - Quần áo)</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px;">
-                    <div onclick="clickStall('SẠP-A01', 'rented', 'Nguyễn Thị Thu Hà', 'Quần áo')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
+                    <div onclick="App.stall.clickStall('SẠP-A01', 'rented', 'Nguyễn Thị Thu Hà', 'Quần áo')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
                         <strong style="display: block; font-size: 15px;">SẠP-A01</strong>
                         <span style="font-size: 11px; opacity: 0.9;">Đã thuê (Hà)</span>
                     </div>
-                    <div onclick="clickStall('SẠP-A02', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
+                    <div onclick="App.stall.clickStall('SẠP-A02', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
                         <strong style="display: block; font-size: 15px;">SẠP-A02</strong>
                         <span style="font-size: 11px; opacity: 0.8;">Đang trống</span>
                     </div>
-                    <div onclick="clickStall('SẠP-A03', 'rented', 'Phạm Minh Tuấn', 'Thời trang')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
+                    <div onclick="App.stall.clickStall('SẠP-A03', 'rented', 'Phạm Minh Tuấn', 'Thời trang')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
                         <strong style="display: block; font-size: 15px;">SẠP-A03</strong>
                         <span style="font-size: 11px; opacity: 0.9;">Đã thuê (Tuấn)</span>
                     </div>
-                    <div onclick="clickStall('SẠP-A04', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
+                    <div onclick="App.stall.clickStall('SẠP-A04', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
                         <strong style="display: block; font-size: 15px;">SẠP-A04</strong>
                         <span style="font-size: 11px; opacity: 0.8;">Đang trống</span>
                     </div>
@@ -175,15 +175,15 @@
             <div>
                 <h4 style="font-size: 14px; font-weight: 600; color: var(--text-heading); margin-bottom: 12px;"><i class="fa-solid fa-apple-whole text-success me-2"></i> Khu B (Thực phẩm tươi sống)</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px;">
-                    <div onclick="clickStall('SẠP-B01', 'rented', 'Trần Văn Hoàng', 'Thịt gia súc')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
+                    <div onclick="App.stall.clickStall('SẠP-B01', 'rented', 'Trần Văn Hoàng', 'Thịt gia súc')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
                         <strong style="display: block; font-size: 15px;">SẠP-B01</strong>
                         <span style="font-size: 11px; opacity: 0.9;">Đã thuê (Hoàng)</span>
                     </div>
-                    <div onclick="clickStall('SẠP-B02', 'repairing', '', '')" style="background-color: var(--red); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
+                    <div onclick="App.stall.clickStall('SẠP-B02', 'repairing', '', '')" style="background-color: var(--red); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
                         <strong style="display: block; font-size: 15px;">SẠP-B02</strong>
                         <span style="font-size: 11px; opacity: 0.9;">Đang sửa chữa</span>
                     </div>
-                    <div onclick="clickStall('SẠP-B03', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
+                    <div onclick="App.stall.clickStall('SẠP-B03', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
                         <strong style="display: block; font-size: 15px;">SẠP-B03</strong>
                         <span style="font-size: 11px; opacity: 0.8;">Đang trống</span>
                     </div>
@@ -194,144 +194,4 @@
     </div>
 </div>
 
-<!-- Nạp SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    // Hàm chuyển đổi chế độ xem Tab
-    function switchView(mode) {
-        if (mode === 'table') {
-            document.getElementById('view-table').style.display = 'block';
-            document.getElementById('view-map').style.display = 'none';
-        } else {
-            document.getElementById('view-table').style.display = 'none';
-            document.getElementById('view-map').style.display = 'block';
-        }
-    }
 
-    // Hàm khi click vào sạp trên sơ đồ (Thực hiện nghiệp vụ gán sạp / chuyển đổi sạp - Mục B.4, B.5)
-    function clickStall(code, status, traderName, line) {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        
-        if (status === 'empty') {
-            // Sạp trống -> Hỏi gán sạp (Mục B.4)
-            Swal.fire({
-                title: 'Quản lý ' + code,
-                text: 'Sạp này hiện đang trống. Bạn có muốn gán sạp này cho tiểu thương kinh doanh?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: '<i class="fa-solid fa-user-plus me-1"></i> Gán tiểu thương',
-                cancelButtonText: 'Đóng',
-                confirmButtonColor: '#1ABB9C',
-                cancelButtonColor: '#a0aec0',
-                background: isDark ? '#1a2332' : '#ffffff',
-                color: isDark ? '#ffffff' : '#0f1623'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Chuyển hướng sang lập hợp đồng (gán sạp)
-                    window.location.href = '<?php echo BASE_URL; ?>admin/contract_add';
-                }
-            });
-        } else if (status === 'rented') {
-            // Sạp đã thuê -> Hỏi chuyển đổi sạp (Mục B.5)
-            Swal.fire({
-                title: code + ' - Đang kinh doanh',
-                html: `<div style="text-align: left; font-size: 13.5px;">
-                        <p><strong>Tiểu thương:</strong> ${traderName}</p>
-                        <p><strong>Ngành kinh doanh:</strong> ${line}</p>
-                       </div>`,
-                icon: 'info',
-                showCancelButton: true,
-                showDenyButton: true,
-                confirmButtonText: '<i class="fa-solid fa-right-left me-1"></i> Chuyển đổi sạp',
-                denyButtonText: 'Thanh lý hợp đồng',
-                cancelButtonText: 'Đóng',
-                confirmButtonColor: '#066fd1',
-                denyButtonColor: '#EA4335',
-                background: isDark ? '#1a2332' : '#ffffff',
-                color: isDark ? '#ffffff' : '#0f1623'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({
-                        title: 'Chuyển đổi sạp ' + code,
-                        text: 'Chọn sạp mới để chuyển tiểu thương ' + traderName + ' sang:',
-                        input: 'select',
-                        inputOptions: {
-                            'SẠP-A02': 'SẠP-A02 (Khu A - Trống)',
-                            'SẠP-B03': 'SẠP-B03 (Khu B - Trống)'
-                        },
-                        inputPlaceholder: '-- Chọn sạp trống --',
-                        showCancelButton: true,
-                        confirmButtonText: 'Xác nhận chuyển',
-                        confirmButtonColor: '#1ABB9C',
-                        background: isDark ? '#1a2332' : '#ffffff',
-                        color: isDark ? '#ffffff' : '#0f1623'
-                    }).then((swapRes) => {
-                        if (swapRes.isConfirmed && swapRes.value) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Chuyển sạp thành công!',
-                                text: 'Tiểu thương ' + traderName + ' đã được chuyển sang ' + swapRes.value,
-                                confirmButtonColor: '#1ABB9C',
-                                background: isDark ? '#1a2332' : '#ffffff',
-                                color: isDark ? '#ffffff' : '#0f1623'
-                            });
-                        }
-                    });
-                } else if (result.isDenied) {
-                    // Thanh lý hợp đồng (Mục C.3)
-                    Swal.fire({
-                        title: 'Thanh lý hợp đồng?',
-                        text: 'Xác nhận thanh lý hợp đồng thuê sạp ' + code + ' của tiểu thương ' + traderName + '?',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#EA4335',
-                        confirmButtonText: 'Đồng ý thanh lý',
-                        background: isDark ? '#1a2332' : '#ffffff',
-                        color: isDark ? '#ffffff' : '#0f1623'
-                    }).then((termRes) => {
-                        if (termRes.isConfirmed) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Đã thanh lý!',
-                                text: 'Hợp đồng sạp ' + code + ' đã chuyển sang trạng thái thanh lý.',
-                                confirmButtonColor: '#1ABB9C',
-                                background: isDark ? '#1a2332' : '#ffffff',
-                                color: isDark ? '#ffffff' : '#0f1623'
-                            });
-                        }
-                    });
-                }
-            });
-        } else {
-            Swal.fire({
-                title: code + ' - Đang bảo trì',
-                text: 'Sạp này đang bảo trì hệ thống hoặc cải tạo cơ sở vật chất.',
-                icon: 'warning',
-                confirmButtonText: 'Đóng',
-                confirmButtonColor: '#1ABB9C',
-                background: isDark ? '#1a2332' : '#ffffff',
-                color: isDark ? '#ffffff' : '#0f1623'
-            });
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const toastConfig = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        });
-
-        <?php if ($success = session::get('success_message')): session::delete('success_message'); ?>
-            toastConfig.fire({
-                icon: 'success',
-                title: '<?php echo $success; ?>'
-            });
-        <?php endif; ?>
-    });
-</script>

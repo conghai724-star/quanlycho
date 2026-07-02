@@ -1,6 +1,40 @@
+<?php
+$theme = 'light';
+if (isset($_COOKIE['app_theme']) && in_array($_COOKIE['app_theme'], ['light', 'dark'])) {
+    $theme = $_COOKIE['app_theme'];
+}
+$htmlBg = $theme === 'dark' ? '#0f1623' : '#f5f7fb';
+?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="<?php echo $theme; ?>" style="background:<?php echo $htmlBg; ?>">
 <head>
+    <style>
+        html, body { background: <?php echo $htmlBg; ?> !important; }
+        @view-transition { navigation: auto; }
+        ::view-transition-old(root) { animation: none; }
+        ::view-transition-new(root) { animation: 180ms ease both vt-enter; }
+        @keyframes vt-enter { from{opacity:0} to{opacity:1} }
+        @media (prefers-reduced-motion: reduce) {
+            ::view-transition-new(root) { animation-duration: 0s; }
+        }
+    </style>
+    <!-- Pre-paint Theme + cookie sync -->
+    <script>
+        (function(){
+            try {
+                var stored = localStorage.getItem('theme');
+                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var theme = stored || (prefersDark ? 'dark' : 'light');
+                var html = document.documentElement;
+                if (html.getAttribute('data-theme') !== theme) {
+                    html.setAttribute('data-theme', theme);
+                    html.style.background = theme === 'dark' ? '#0f1623' : '#f5f7fb';
+                }
+                document.cookie = 'app_theme=' + theme + ';path=/;max-age=31536000;SameSite=Lax';
+            } catch(e) {}
+        })();
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập BQL Chợ Smart</title>
@@ -17,17 +51,6 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Pre-paint Theme -->
-    <script>
-        (function(){
-            try {
-                var t = localStorage.getItem('theme');
-                var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                var theme = t || (d ? 'dark' : 'light');
-                document.documentElement.setAttribute('data-theme', theme);
-            } catch(e) {}
-        })();
-    </script>
     <style>
         .error-alert {
             background-color: rgba(211, 47, 47, 0.1);

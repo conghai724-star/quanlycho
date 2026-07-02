@@ -80,25 +80,4 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const toastConfig = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        });
 
-        <?php if ($success = session::get('success_message')): session::delete('success_message'); ?>
-            toastConfig.fire({
-                icon: 'success',
-                title: '<?php echo $success; ?>'
-            });
-        <?php endif; ?>
-    });
-</script>

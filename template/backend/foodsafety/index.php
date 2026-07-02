@@ -2,8 +2,8 @@
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
     <!-- Nút chuyển đổi Tab -->
     <div class="segmented" role="radiogroup" style="max-width: 380px;">
-        <label><input type="radio" name="fs-mode" value="docs" checked onclick="switchFSTab('docs')"><span>Giấy tờ & Chứng nhận</span></label>
-        <label><input type="radio" name="fs-mode" value="inspections" onclick="switchFSTab('inspections')"><span>Thanh tra & Vi phạm</span></label>
+        <label><input type="radio" name="fs-mode" value="docs" checked onclick="App.foodsafety.switchTab('docs')"><span>Giấy tờ & Chứng nhận</span></label>
+        <label><input type="radio" name="fs-mode" value="inspections" onclick="App.foodsafety.switchTab('inspections')"><span>Thanh tra & Vi phạm</span></label>
     </div>
     
     <a href="<?php echo BASE_URL; ?>admin/foodsafety_add" class="btn btn-primary" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: white;">
@@ -146,36 +146,4 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    // Hàm chuyển đổi Tab ATTP
-    function switchFSTab(mode) {
-        if (mode === 'docs') {
-            document.getElementById('fs-docs').style.display = 'block';
-            document.getElementById('fs-inspections').style.display = 'none';
-        } else {
-            document.getElementById('fs-docs').style.display = 'none';
-            document.getElementById('fs-inspections').style.display = 'block';
-        }
-    }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const toastConfig = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        });
-
-        <?php if ($success = session::get('success_message')): session::delete('success_message'); ?>
-            toastConfig.fire({
-                icon: 'success',
-                title: '<?php echo $success; ?>'
-            });
-        <?php endif; ?>
-    });
-</script>

@@ -2,8 +2,8 @@
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
     <!-- Nút chuyển đổi Tab -->
     <div class="segmented" role="radiogroup" style="max-width: 380px;">
-        <label><input type="radio" name="user-mode" value="accounts" checked onclick="switchUserTab('accounts')"><span>Tài khoản & Phân quyền</span></label>
-        <label><input type="radio" name="user-mode" value="logs" onclick="switchUserTab('logs')"><span>Nhật ký hệ thống (Audit)</span></label>
+        <label><input type="radio" name="user-mode" value="accounts" checked onclick="App.user.switchTab('accounts')"><span>Tài khoản & Phân quyền</span></label>
+        <label><input type="radio" name="user-mode" value="logs" onclick="App.user.switchTab('logs')"><span>Nhật ký hệ thống (Audit)</span></label>
     </div>
     
     <a href="<?php echo BASE_URL; ?>admin/user_add" class="btn btn-primary" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: white;">
@@ -60,7 +60,7 @@
                                 <td style="padding: 14px 16px; text-align: right;">
                                     <div style="display: flex; justify-content: flex-end; gap: 6px;">
                                         <!-- Khóa/Mở khóa tài khoản (Mục F.8) -->
-                                        <button class="btn btn-outline btn-sm" onclick="toggleLockUser(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['fullname']); ?>')" style="padding: 4px 8px; font-size: 11px;" title="Khóa / Mở khóa tài khoản">
+                                        <button class="btn btn-outline btn-sm" onclick="App.user.toggleLockUser(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['fullname']); ?>')" style="padding: 4px 8px; font-size: 11px;" title="Khóa / Mở khóa tài khoản">
                                             <i class="fa-solid fa-user-shield"></i>
                                         </button>
                                     </div>
@@ -123,77 +123,3 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    // Hàm chuyển đổi Tab người dùng
-    function switchUserTab(mode) {
-        if (mode === 'accounts') {
-            document.getElementById('user-accounts').style.display = 'block';
-            document.getElementById('user-logs').style.display = 'none';
-        } else {
-            document.getElementById('user-accounts').style.display = 'none';
-            document.getElementById('user-logs').style.display = 'block';
-        }
-    }
-
-    // Hàm khóa/mở khóa tài khoản (Mục F.8)
-    function toggleLockUser(id, name) {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        
-        Swal.fire({
-            title: 'Khóa/Mở khóa tài khoản?',
-            text: "Xác nhận thay đổi trạng thái hoạt động của tài khoản '" + name + "'?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Đồng ý',
-            cancelButtonText: 'Hủy bỏ',
-            confirmButtonColor: '#EA4335',
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Giả lập thay đổi trạng thái trực tiếp trên giao diện
-                const statusCol = document.getElementById('status-col-' + id);
-                if (statusCol.innerHTML.includes('Hoạt động')) {
-                    statusCol.innerHTML = '<span class="status status-red">Bị khóa</span>';
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Đã khóa tài khoản!',
-                        confirmButtonColor: '#1ABB9C',
-                        background: isDark ? '#1a2332' : '#ffffff',
-                        color: isDark ? '#ffffff' : '#0f1623'
-                    });
-                } else {
-                    statusCol.innerHTML = '<span class="status status-green">Hoạt động</span>';
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Đã kích hoạt lại tài khoản!',
-                        confirmButtonColor: '#1ABB9C',
-                        background: isDark ? '#1a2332' : '#ffffff',
-                        color: isDark ? '#ffffff' : '#0f1623'
-                    });
-                }
-            }
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const toastConfig = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        });
-
-        <?php if ($success = session::get('success_message')): session::delete('success_message'); ?>
-            toastConfig.fire({
-                icon: 'success',
-                title: '<?php echo $success; ?>'
-            });
-        <?php endif; ?>
-    });
-</script>

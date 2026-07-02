@@ -159,7 +159,11 @@
         </div>
         <div class="card-body" style="padding: 16px; display: flex; flex-direction: column; justify-content: space-between; height: 300px;">
             <div style="height: 180px; display: flex; align-items: center; justify-content: center;">
-                <canvas id="stallsPieChart" style="width: 100%; height: 100%;"></canvas>
+                <canvas id="stallsPieChart" 
+                        data-rented="<?php echo $stats['rented_stalls']; ?>" 
+                        data-empty="<?php echo $stats['empty_stalls']; ?>" 
+                        data-repairing="<?php echo $stats['repairing_stalls']; ?>"
+                        style="width: 100%; height: 100%;"></canvas>
             </div>
             <div style="display: flex; justify-content: space-around; text-align: center; font-size: 11px; margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
                 <div>
@@ -245,116 +249,4 @@
     </div>
 </div>
 
-<!-- Nạp Chart.js CDN (Phòng hờ nếu layout không nạp) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- Scripts vẽ biểu đồ -->
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    // 1. Lấy dữ liệu doanh thu từ apiController bằng AJAX
-    fetch('<?php echo BASE_URL; ?>api/getRevenueData')
-        .then(response => response.json())
-        .then(data => {
-            // Đổi đơn vị sang Triệu đồng
-            const revMillions = data.revenue.map(val => val / 1000000);
-            const expMillions = data.expense.map(val => val / 1000000);
-
-            const ctxRevenue = document.getElementById('revenueChart').getContext('2d');
-            
-            // Lấy màu biến CSS của Gentelella (để tự động thay đổi màu khi bật Dark Mode)
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const primaryColor = '#1ABB9C'; // Màu xanh ngọc Gentelella
-            const secondaryColor = isDark ? '#2e3a50' : '#eceff1';
-
-            new Chart(ctxRevenue, {
-                type: 'bar',
-                data: {
-                    labels: data.labels,
-                    datasets: [
-                        {
-                            label: 'Tổng thu',
-                            data: revMillions,
-                            backgroundColor: '#1ABB9C', // Teal
-                            borderRadius: 4,
-                            barPercentage: 0.5
-                        },
-                        {
-                            label: 'Tổng chi',
-                            data: expMillions,
-                            backgroundColor: '#FBBC04', // Yellow
-                            borderRadius: 4,
-                            barPercentage: 0.5
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: isDark ? '#2a3649' : '#eceff1'
-                            },
-                            ticks: {
-                                color: isDark ? '#a0aec0' : '#6b7280'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: isDark ? '#a0aec0' : '#6b7280'
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                boxWidth: 15,
-                                color: isDark ? '#e2e8f0' : '#111827',
-                                font: {
-                                    family: 'Inter',
-                                    size: 12
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        });
-
-    // 2. Vẽ biểu đồ tròn phân bổ sạp chợ
-    const ctxStalls = document.getElementById('stallsPieChart').getContext('2d');
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    
-    new Chart(ctxStalls, {
-        type: 'doughnut',
-        data: {
-            labels: ['Đã thuê', 'Trống', 'Đang sửa'],
-            datasets: [{
-                data: [
-                    <?php echo $stats['rented_stalls']; ?>, 
-                    <?php echo $stats['empty_stalls']; ?>, 
-                    <?php echo $stats['repairing_stalls']; ?>
-                ],
-                backgroundColor: ['#34A853', '#FBBC04', '#EA4335'], // Xanh lá, vàng, đỏ
-                borderWidth: 2,
-                borderColor: isDark ? '#1a2332' : '#ffffff',
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        }
-    });
-});
-</script>
