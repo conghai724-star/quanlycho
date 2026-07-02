@@ -1,0 +1,36 @@
+# Node dependencies (thư viện npm)
+/node_modules/
+
+# Nguồn theme mẫu (không cần đẩy vì đã được build vào public/assets)
+/theme/
+
+# PHP Composer dependencies
+/vendor/
+
+# Thư mục chứa file upload của tiểu thương (Không nên đẩy lên Git để tránh nặng repo và lộ thông tin nhạy cảm)
+/uploads/*
+!/uploads/.gitkeep
+
+# Các file cấu hình môi trường / mật khẩu nhạy cảm
+.env
+.env.local
+.env.*.local
+
+# Các tệp cấu hình của IDE/Editor cá nhân
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Nhật ký và File rác hệ điều hành
+/debug.txt
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Thư mục tạm của agent AI
+.agents/
