@@ -91,9 +91,9 @@ SELECT 3, id FROM `permissions` WHERE `permission_code` IN
 -- 5. Tài khoản người dùng mặc định (users)
 -- Mật khẩu mặc định: admin123 cho admin, staff123 cho staff, accountant123 cho accountant
 INSERT INTO `users` (`id`, `username`, `password`, `fullname`, `email`, `is_active`) VALUES
-(1, 'admin', '$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm', 'Ban Quản Lý Chợ', 'bql.cho@gmail.com', 1),
-(2, 'nhanvien1', '$2y$10$lQ0J96b.f0J8GzMh6l3u/ef.L19e7kH7bC9c6QgdIVFlYg7B77UdFm', 'Nguyễn Văn Thu', 'nvthu.cho@gmail.com', 1),
-(3, 'ketoan1', '$2y$10$TKh8H1.PfQx37YgCzwiKb.KjNyWgaHb9cbcoQgdIVFlYg7B77UdFm', 'Trần Thị Kế Toán', 'ketoan.cho@gmail.com', 1);
+(1, 'admin', '$2y$10$O1TJx90uJMLCMEwz3whX9eFfFItlMJdaCpOkn7QfPyJeRwayswDoW', 'Ban Quản Lý Chợ', 'bql.cho@gmail.com', 1),
+(2, 'nhanvien1', '$2y$10$PbdTDxALL6kNIh8bluNJ9OU5aab4XXSV74aAygOys/BPyaMPClczu', 'Nguyễn Văn Thu', 'nvthu.cho@gmail.com', 1),
+(3, 'ketoan1', '$2y$10$aufmDhq1tjcdncYQaFRAHun37TXxACHxFynBjw6BHKdtjS8lQ/K.y', 'Trần Thị Kế Toán', 'ketoan.cho@gmail.com', 1);
 
 -- 6. Liên kết Tài khoản - Vai trò (user_roles)
 INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
