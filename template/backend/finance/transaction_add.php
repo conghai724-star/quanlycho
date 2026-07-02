@@ -13,7 +13,7 @@
     </div>
     <div class="card-body" style="padding: 24px;">
         <form action="<?php echo BASE_URL; ?>admin/transaction_add" method="POST">
-            <input type="hidden" name="csrf_token" value="<?php echo security::getToken(); ?>">
+            <?php csrf_field(); ?>
             <!-- Hidden input để giữ loại phiếu -->
             <input type="hidden" name="type" value="<?php echo htmlspecialchars($type); ?>">
 

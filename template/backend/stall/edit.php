@@ -11,7 +11,7 @@
     </div>
     <div class="card-body" style="padding: 24px;">
         <form action="<?php echo BASE_URL; ?>admin/stall_edit/<?php echo $stall['id']; ?>" method="POST">
-            <input type="hidden" name="csrf_token" value="<?php echo security::getToken(); ?>">
+            <?php csrf_field(); ?>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <!-- Mã sạp -->
                 <div class="form-group">

@@ -27,20 +27,19 @@ class security {
             session_start();
         }
         
-        // Sử dụng random_bytes để tạo độ ngẫu nhiên an toàn tuyệt đối
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         return $_SESSION['csrf_token'];
     }
 
     /**
-     * Làm mới token (nên chạy sau khi đăng nhập, đăng xuất)
+     * Làm mới token (chỉ gọi khi login, logout hoặc xoay vòng khóa khi cần thiết)
      */
     public static function regenerateToken() {
         return self::generateToken();
     }
 
     /**
-     * Xác thực token CSRF gửi lên từ POST Form hoặc từ AJAX Header
+     * Xác thực token CSRF gửi lên từ POST/PUT/PATCH/DELETE Form hoặc từ AJAX Header
      */
     public static function validateToken($token = null) {
         if (session_status() === PHP_SESSION_NONE) {
@@ -68,5 +67,50 @@ class security {
 
         // So sánh an toàn tránh tấn công Timing Attack
         return hash_equals($sessionToken, $token);
+    }
+
+    /**
+     * Tự động kiểm tra và yêu cầu CSRF đối với các request ghi dữ liệu (POST, PUT, PATCH, DELETE)
+     */
+    public static function requireCsrf() {
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
+            if (!self::validateToken()) {
+                http_response_code(403);
+                echo "<div style='font-family: \"Inter\", sans-serif; text-align: center; padding: 50px;'>";
+                echo "<h1 style='color: #e74c3c; font-size: 32px;'>403 Forbidden</h1>";
+                echo "<p style='color: #666; font-size: 16px;'>Yêu cầu bị từ chối do mã xác thực bảo mật (CSRF Token) không hợp lệ hoặc đã hết hạn.</p>";
+                echo "<a href='javascript:history.back()' style='color: #1ABB9C; text-decoration: none; font-weight: 600;'>Quay lại trang trước</a>";
+                echo "</div>";
+                exit();
+            }
+        }
+    }
+
+    /**
+     * Sinh thẻ HTML input chứa token CSRF để chèn vào Form
+     */
+    public static function csrf_field() {
+        return '<input type="hidden" name="csrf_token" value="' . self::getToken() . '">';
+    }
+
+    /**
+     * Sinh thẻ HTML meta chứa token CSRF để dùng cho các request AJAX
+     */
+    public static function csrf_meta() {
+        return '<meta name="csrf-token" content="' . self::getToken() . '">';
+    }
+}
+
+// Đăng ký các helper functions toàn cục (global helpers) giúp dễ sử dụng trong các template view
+if (!function_exists('csrf_field')) {
+    function csrf_field() {
+        echo security::csrf_field();
+    }
+}
+
+if (!function_exists('csrf_meta')) {
+    function csrf_meta() {
+        echo security::csrf_meta();
     }
 }
