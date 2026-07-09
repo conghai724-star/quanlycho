@@ -77,6 +77,24 @@ class validator {
         return $this;
     }
 
+    public function numeric($field, $value, $message = "Trường này phải là dạng số.") {
+        if (!empty($value) && !is_numeric($value)) {
+            $this->errors[$field] = $message;
+        }
+        return $this;
+    }
+
+    /**
+     * Kiểm tra giá trị tối thiểu
+     */
+    public function min($field, $value, $min, $message = null) {
+        $msg = $message ?? "Trường này phải lớn hơn hoặc bằng {$min}.";
+        if (!empty($value) && is_numeric($value) && $value < $min) {
+            $this->errors[$field] = $msg;
+        }
+        return $this;
+    }
+
     /**
      * Thêm lỗi thủ công
      */

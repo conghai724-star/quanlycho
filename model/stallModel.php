@@ -29,12 +29,17 @@ class stallModel {
        ========================================================================== */
 
     /**
-     * Lấy toàn bộ danh sách sạp kèm thông tin khu vực
+     * Lấy toàn bộ danh sách sạp kèm thông tin khu vực và bộ lọc tìm kiếm
      */
-    public function getAll($areaId = null, $status = null) {
-        $sql = "SELECT s.*, a.area_name 
+    public function getAll($areaId = null, $status = null, $search = null) {
+        $sql = "SELECT s.*, ss.code AS status, ss.status_name, sc.color_class, a.area_name, a.block, a.lot, t.fullname AS trader_name, bl.line_name AS business_line_name 
                 FROM stalls s
-                LEFT JOIN areas a ON s.area_id = a.id";
+                LEFT JOIN system_statuses ss ON s.status_id = ss.id
+                LEFT JOIN status_colors sc ON ss.color_id = sc.id
+                LEFT JOIN areas a ON s.area_id = a.id
+                LEFT JOIN contracts c ON c.stall_id = s.id AND c.status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active')
+                LEFT JOIN traders t ON c.trader_id = t.id
+                LEFT JOIN business_lines bl ON t.business_line_id = bl.id";
         
         $where = [];
         $params = [];
@@ -45,8 +50,15 @@ class stallModel {
         }
 
         if ($status) {
-            $where[] = "s.status = :status";
+            $where[] = "ss.code = :status";
             $params['status'] = $status;
+        }
+
+        if (!empty($search)) {
+            $where[] = "(s.stall_code LIKE :search1 OR a.block LIKE :search2 OR a.lot LIKE :search3)";
+            $params['search1'] = "%$search%";
+            $params['search2'] = "%$search%";
+            $params['search3'] = "%$search%";
         }
 
         if (!empty($where)) {
@@ -58,16 +70,24 @@ class stallModel {
     }
 
     public function getById($id) {
-        $sql = "SELECT s.*, a.area_name 
+        $sql = "SELECT s.*, ss.code AS status, ss.status_name, sc.color_class, a.area_name, a.block, a.lot, t.fullname AS trader_name, bl.line_name AS business_line_name 
                 FROM stalls s 
+                LEFT JOIN system_statuses ss ON s.status_id = ss.id
+                LEFT JOIN status_colors sc ON ss.color_id = sc.id
                 LEFT JOIN areas a ON s.area_id = a.id 
+                LEFT JOIN contracts c ON c.stall_id = s.id AND c.status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active')
+                LEFT JOIN traders t ON c.trader_id = t.id
+                LEFT JOIN business_lines bl ON t.business_line_id = bl.id
                 WHERE s.id = :id";
         return $this->db->selectOne($sql, ['id' => $id]);
     }
 
     public function create($data) {
-        $sql = "INSERT INTO stalls (area_id, stall_code, stall_type, area_size, base_price, status) 
-                VALUES (:area_id, :stall_code, :stall_type, :area_size, :base_price, :status)";
+        $statusModel = new statusModel();
+        $emptyStatusId = $statusModel->getIdByCode('stall', 'empty');
+
+        $sql = "INSERT INTO stalls (area_id, stall_code, stall_type, area_size, base_price, status_id) 
+                VALUES (:area_id, :stall_code, :stall_type, :area_size, :base_price, :status_id)";
         
         $params = [
             'area_id'    => $data['area_id'],
@@ -75,7 +95,7 @@ class stallModel {
             'stall_type' => $data['stall_type'] ?? 'Quầy hàng',
             'area_size'  => $data['area_size'],
             'base_price' => $data['base_price'],
-            'status'     => $data['status'] ?? 'empty'
+            'status_id'  => $data['status_id'] ?: $emptyStatusId
         ];
 
         $this->db->query($sql, $params);
@@ -83,9 +103,12 @@ class stallModel {
     }
 
     public function update($id, $data) {
+        $statusModel = new statusModel();
+        $emptyStatusId = $statusModel->getIdByCode('stall', 'empty');
+
         $sql = "UPDATE stalls 
-                SET area_id = :area_id, stall_code = :stall_code, stall_type = :stall_type, 
-                    area_size = :area_size, base_price = :base_price, status = :status 
+                SET area_id = :area_id, stall_code = :stall_code, 
+                    stall_type = :stall_type, area_size = :area_size, base_price = :base_price, status_id = :status_id 
                 WHERE id = :id";
         
         $params = [
@@ -95,19 +118,56 @@ class stallModel {
             'stall_type' => $data['stall_type'] ?? 'Quầy hàng',
             'area_size'  => $data['area_size'],
             'base_price' => $data['base_price'],
-            'status'     => $data['status'] ?? 'empty'
+            'status_id'  => $data['status_id'] ?: $emptyStatusId
         ];
 
         return $this->db->query($sql, $params);
     }
 
     public function updateStatus($id, $status) {
-        $sql = "UPDATE stalls SET status = :status WHERE id = :id";
-        return $this->db->query($sql, ['id' => $id, 'status' => $status]);
+        if (is_numeric($status)) {
+            $statusId = $status;
+        } else {
+            $statusModel = new statusModel();
+            $statusId = $statusModel->getIdByCode('stall', $status);
+        }
+        $sql = "UPDATE stalls SET status_id = :status_id WHERE id = :id";
+        return $this->db->query($sql, ['id' => $id, 'status_id' => $statusId]);
     }
 
     public function delete($id) {
         $sql = "DELETE FROM stalls WHERE id = :id";
         return $this->db->query($sql, ['id' => $id]);
+    }
+
+    /**
+     * Kiểm tra xem sạp có hợp đồng nào đang hoạt động không
+     */
+    public function hasActiveContract($stallId) {
+        $sql = "SELECT COUNT(*) as count FROM contracts WHERE stall_id = :stall_id AND status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active')";
+        $res = $this->db->selectOne($sql, ['stall_id' => $stallId]);
+        return ($res['count'] ?? 0) > 0;
+    }
+
+    /**
+     * Kiểm tra xem mã sạp đã tồn tại chưa
+     */
+    public function isStallCodeExists($code, $excludeId = null) {
+        $sql = "SELECT COUNT(*) as count FROM stalls WHERE stall_code = :code";
+        $params = ['code' => $code];
+        if ($excludeId !== null) {
+            $sql .= " AND id != :excludeId";
+            $params['excludeId'] = $excludeId;
+        }
+        $res = $this->db->selectOne($sql, $params);
+        return ($res['count'] ?? 0) > 0;
+    }
+
+    /**
+     * Lấy danh sách các trạng thái của sạp
+     */
+    public function getStallStatuses() {
+        $sql = "SELECT * FROM system_statuses WHERE domain = 'stall'";
+        return $this->db->select($sql);
     }
 }

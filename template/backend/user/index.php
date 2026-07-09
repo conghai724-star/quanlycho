@@ -44,14 +44,14 @@
                                     <?php echo htmlspecialchars($user['email']); ?>
                                 </td>
                                 <td style="padding: 14px 16px;">
-                                    <?php if ($user['role'] === 'admin'): ?>
-                                        <span class="chip" style="background-color: rgba(234, 67, 53, 0.1); color: #EA4335; border: 1px solid rgba(234, 67, 53, 0.2);"><?php echo htmlspecialchars($user['role_name']); ?></span>
+                                    <?php if ($user['user_group'] == 1): ?>
+                                        <span class="chip" style="background-color: rgba(234, 67, 53, 0.1); color: #EA4335; border: 1px solid rgba(234, 67, 53, 0.2);">Quản trị hệ thống</span>
                                     <?php else: ?>
-                                        <span class="chip" style="background-color: rgba(66, 133, 244, 0.1); color: #4285F4; border: 1px solid rgba(66, 133, 244, 0.2);"><?php echo htmlspecialchars($user['role_name']); ?></span>
+                                        <span class="chip" style="background-color: rgba(66, 133, 244, 0.1); color: #4285F4; border: 1px solid rgba(66, 133, 244, 0.2);">Nhân viên BQL</span>
                                     <?php endif; ?>
                                 </td>
                                 <td style="padding: 14px 16px;" id="status-col-<?php echo $user['id']; ?>">
-                                    <?php if ($user['status'] === 'active'): ?>
+                                    <?php if ($user['is_active'] == 1): ?>
                                         <span class="status status-green">Hoạt động</span>
                                     <?php else: ?>
                                         <span class="status status-red">Bị khóa</span>
@@ -59,6 +59,10 @@
                                 </td>
                                 <td style="padding: 14px 16px; text-align: right;">
                                     <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                                        <!-- Sửa tài khoản -->
+                                        <a href="<?php echo BASE_URL; ?>admin/user_edit/<?php echo $user['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none; color: inherit; display: inline-flex; align-items: center; justify-content: center;" title="Sửa tài khoản">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
                                         <!-- Khóa/Mở khóa tài khoản (Mục F.8) -->
                                         <button class="btn btn-outline btn-sm" onclick="App.user.toggleLockUser(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['fullname']); ?>')" style="padding: 4px 8px; font-size: 11px;" title="Khóa / Mở khóa tài khoản">
                                             <i class="fa-solid fa-user-shield"></i>

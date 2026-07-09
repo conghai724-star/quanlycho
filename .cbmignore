@@ -1,0 +1,28 @@
+# Exclude compiled assets and heavy vendor libraries
+public/assets/css/
+public/assets/js/
+public/assets/vendor/
+public/assets/images/
+public/assets/img/
+public\assets\css\
+public\assets\js\
+public\assets\vendor\
+public\assets\images\
+public\assets\img\
+
+# Exclude temporary runs and debug logs
+strix_runs/
+strix_runs\
+debug.txt
+
+# Exclude IDE and AI agent scratch files
+.gemini/
+.gemini\
+.specify/
+.specify\
+.agents/
+.agents\
+
+# Exclude template / backup samples
+z_mau/
+z_mau\

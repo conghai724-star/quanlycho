@@ -1,0 +1,7 @@
+- [ ] Task 1: Chốt mô hình dữ liệu, role, trạng thái tài khoản, và contract auth dùng chung.
+- [ ] Task 2: Rà soát middleware/session/route hiện tại và chuẩn hóa cơ chế bảo vệ trang.
+- [ ] Task 3: Làm quản lý người dùng: danh sách, tạo mới, sửa, khóa/mở khóa, validate.
+- [ ] Task 4: Làm đăng nhập và đăng xuất, gồm xử lý lỗi và chuyển hướng sau đăng nhập.
+- [ ] Task 5: Làm đổi mật khẩu cho user đã đăng nhập, kiểm tra mật khẩu cũ và xác nhận mật khẩu mới.
+- [ ] Task 6: Làm quên mật khẩu và đặt lại mật khẩu bằng token có thời hạn.
+- [ ] Task 7: Viết/hoàn thiện test và kiểm tra end-to-end cho toàn bộ 4 luồng.

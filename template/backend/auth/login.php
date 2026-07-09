@@ -121,7 +121,7 @@ $htmlBg = $theme === 'dark' ? '#0f1623' : '#f5f7fb';
                 <label class="form-check">
                     <input type="checkbox" checked> Ghi nhớ đăng nhập
                 </label>
-                <a href="#">Quên mật khẩu?</a>
+                <a href="<?php echo BASE_URL; ?>home/forgot_password">Quên mật khẩu?</a>
             </div>
 
             <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;height:38px">

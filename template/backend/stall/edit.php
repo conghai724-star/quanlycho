@@ -10,54 +10,86 @@
         <div class="card-title" style="font-size: 16px; font-weight: 600;">Chỉnh sửa sạp chợ: <?php echo htmlspecialchars($stall['stall_code']); ?></div>
     </div>
     <div class="card-body" style="padding: 24px;">
-        <form action="<?php echo BASE_URL; ?>admin/stall_edit/<?php echo $stall['id']; ?>" method="POST">
+        <!-- Thông báo lỗi nếu xảy ra lỗi validate (Dành cho Fallback Submit) -->
+        <?php if (!empty($error)): ?>
+            <div style="background-color: rgba(211, 47, 47, 0.1); border: 1px solid rgba(211, 47, 47, 0.2); color: #d32f2f; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span><?php echo $error; ?></span>
+            </div>
+        <?php endif; ?>
+
+        <form id="form-edit-stall" action="<?php echo BASE_URL; ?>api/editStall" method="POST">
             <?php csrf_field(); ?>
+            <!-- Hidden ID -->
+            <input type="hidden" name="id" value="<?php echo $stall['id']; ?>">
+
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <!-- Mã sạp -->
                 <div class="form-group">
                     <label class="form-label" for="stall_code" style="font-weight: 500; color: var(--text-muted);">Mã sạp (Không thể sửa)</label>
-                    <input type="text" id="stall_code" class="form-control" value="<?php echo htmlspecialchars($stall['stall_code']); ?>" style="background-color: var(--bg-surface-secondary); cursor: not-allowed;" readonly>
+                    <input type="text" id="stall_code" name="stall_code" class="form-control" value="<?php echo htmlspecialchars($stall['stall_code']); ?>" style="background-color: var(--bg-surface-secondary); cursor: not-allowed;" readonly>
                 </div>
 
                 <!-- Phân khu -->
                 <div class="form-group">
-                    <label class="form-label" for="zone" style="font-weight: 500;">Phân khu chợ <span style="color: var(--red)">*</span></label>
-                    <select id="zone" name="zone" class="form-control" required>
-                        <option value="Khu A (Quần áo)" <?php echo $stall['zone'] === 'Khu A (Quần áo)' ? 'selected' : ''; ?>>Khu A (Quần áo / Vải vóc)</option>
-                        <option value="Khu B (Thực phẩm)" <?php echo $stall['zone'] === 'Khu B (Thực phẩm)' ? 'selected' : ''; ?>>Khu B (Thực phẩm tươi sống)</option>
-                        <option value="Khu C (Ăn uống)" <?php echo $stall['zone'] === 'Khu C (Ăn uống)' ? 'selected' : ''; ?>>Khu C (Ẩm thực / Ăn uống)</option>
+                    <label class="form-label" for="area_id" style="font-weight: 500;">Phân khu chợ (Khu vực) <span style="color: var(--red)">*</span></label>
+                    <select id="area_id" name="area_id" class="form-control" required>
+                        <option value="">-- Chọn khu vực --</option>
+                        <?php if (!empty($areas)): ?>
+                            <?php foreach ($areas as $a): ?>
+                                <option value="<?php echo $a['id']; ?>" <?php echo $stall['area_id'] == $a['id'] ? 'selected' : ''; ?>>
+                                    <?php 
+                                    $displayText = $a['area_name'];
+                                    if (!empty($a['block'])) $displayText .= ' - ' . $a['block'];
+                                    if (!empty($a['lot'])) $displayText .= ' - ' . $a['lot'];
+                                    echo htmlspecialchars($displayText); 
+                                    ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
             </div>
 
+
+
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
-                <!-- Vị trí cụ thể -->
+                <!-- Loại sạp -->
                 <div class="form-group">
-                    <label class="form-label" for="location" style="font-weight: 500;">Vị trí cụ thể (Dãy/Số)</label>
-                    <input type="text" id="location" name="location" class="form-control" value="<?php echo htmlspecialchars($stall['location']); ?>">
+                    <label class="form-label" for="stall_type" style="font-weight: 500;">Loại sạp chợ</label>
+                    <select id="stall_type" name="stall_type" class="form-control">
+                        <option value="Quầy hàng" <?php echo $stall['stall_type'] === 'Quầy hàng' ? 'selected' : ''; ?>>Quầy hàng</option>
+                        <option value="Kiot" <?php echo $stall['stall_type'] === 'Kiot' ? 'selected' : ''; ?>>Kiot</option>
+                        <option value="Mặt bằng trống" <?php echo $stall['stall_type'] === 'Mặt bằng trống' ? 'selected' : ''; ?>>Mặt bằng trống</option>
+                        <option value="Khác" <?php echo $stall['stall_type'] === 'Khác' ? 'selected' : ''; ?>>Khác</option>
+                    </select>
                 </div>
 
                 <!-- Diện tích -->
                 <div class="form-group">
-                    <label class="form-label" for="area" style="font-weight: 500;">Diện tích (m²) <span style="color: var(--red)">*</span></label>
-                    <input type="number" id="area" name="area" class="form-control" value="<?php echo htmlspecialchars($stall['area']); ?>" required>
+                    <label class="form-label" for="area_size" style="font-weight: 500;">Diện tích (m²) <span style="color: var(--red)">*</span></label>
+                    <input type="number" step="0.01" min="0.01" id="area_size" name="area_size" class="form-control" placeholder="Nhập diện tích" value="<?php echo htmlspecialchars($stall['area_size']); ?>" required>
                 </div>
             </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
-                <!-- Giá thuê -->
+                <!-- Đơn giá thuê -->
                 <div class="form-group">
-                    <label class="form-label" for="price" style="font-weight: 500;">Đơn giá thuê / tháng (VNĐ) <span style="color: var(--red)">*</span></label>
-                    <input type="number" id="price" name="price" class="form-control" value="<?php echo htmlspecialchars($stall['price']); ?>" required>
+                    <label class="form-label" for="base_price" style="font-weight: 500;">Đơn giá thuê / tháng (VNĐ) <span style="color: var(--red)">*</span></label>
+                    <input type="number" min="0" id="base_price" name="base_price" class="form-control" placeholder="Nhập giá cho thuê mỗi tháng" value="<?php echo htmlspecialchars($stall['base_price']); ?>" required>
                 </div>
 
                 <!-- Trạng thái -->
                 <div class="form-group">
                     <label class="form-label" for="status" style="font-weight: 500;">Trạng thái sạp</label>
                     <select id="status" name="status" class="form-control">
-                        <option value="rented" <?php echo $stall['status'] === 'rented' ? 'selected' : ''; ?>>Đã cho thuê</option>
-                        <option value="empty" <?php echo $stall['status'] === 'empty' ? 'selected' : ''; ?>>Đang trống</option>
-                        <option value="repairing" <?php echo $stall['status'] === 'repairing' ? 'selected' : ''; ?>>Đang sửa chữa / Bảo trì</option>
+                        <?php if (!empty($statuses)): ?>
+                            <?php foreach ($statuses as $st): ?>
+                                <option value="<?php echo htmlspecialchars($st['id']); ?>" <?php echo $stall['status_id'] == $st['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($st['status_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
             </div>
@@ -73,3 +105,5 @@
         </form>
     </div>
 </div>
+
+<script src="<?php echo BASE_URL; ?>public/assets/js/pages/admin/stall.js?v=<?php echo time(); ?>"></script>

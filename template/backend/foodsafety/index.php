@@ -13,86 +13,74 @@
 </div>
 
 <!-- TAB 1: GIẤY TỜ & CHỨNG NHẬN (ATTP, SỨC KHỎE, TẬP HUẤN) -->
-<div id="fs-docs" class="card">
-    <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
-        <div class="card-title" style="font-size: 16px; font-weight: 600;">Hồ sơ Chứng nhận vệ sinh ATTP tiểu thương</div>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                <thead>
-                    <tr style="text-align: left; background-color: var(--bg-surface-secondary); border-bottom: 1px solid var(--border-color);">
-                        <th style="padding: 12px 16px;">Tiểu thương</th>
-                        <th style="padding: 12px 16px;">Cơ sở kinh doanh</th>
-                        <th style="padding: 12px 16px; width: 140px;">Giấy chứng nhận ATTP (E.1)</th>
-                        <th style="padding: 12px 16px; width: 140px;">Khám sức khỏe (E.2)</th>
-                        <th style="padding: 12px 16px; width: 140px;">Tập huấn ATTP (E.3)</th>
-                        <th style="padding: 12px 16px; width: 120px;">Ngày hết hạn (E.4)</th>
-                        <th style="padding: 12px 16px; width: 120px;">Trạng thái</th>
-                        <th style="padding: 12px 16px; text-align: right; width: 80px;">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($certificates)): ?>
-                        <?php foreach ($certificates as $index => $cert): ?>
-                            <!-- Giả lập trạng thái khám sức khỏe & tập huấn -->
-                            <?php 
-                                $healthStatus = ['Đã khám (Hạn 2027)', 'Đã khám (Hạn 2026)', 'Hết hạn'];
-                                $trainingStatus = ['Đã tập huấn', 'Đã tập huấn', 'Chưa tập huấn'];
-                                $hStatus = $healthStatus[$index % count($healthStatus)];
-                                $tStatus = $trainingStatus[$index % count($trainingStatus)];
-                            ?>
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td style="padding: 14px 16px; font-weight: 600; color: var(--text-heading);">
-                                    <?php echo htmlspecialchars($cert['trader_name']); ?>
-                                </td>
-                                <td style="padding: 14px 16px; font-weight: 600; color: var(--text-heading);">
-                                    <?php echo htmlspecialchars($cert['shop_name']); ?>
-                                </td>
-                                <td class="cell-mono" style="padding: 14px 16px; font-weight: 600; font-size: 11.5px; color: var(--primary);">
-                                    <?php echo htmlspecialchars($cert['cert_code']); ?>
-                                </td>
-                                <td style="padding: 14px 16px; color: <?php echo $hStatus === 'Hết hạn' ? 'var(--red)' : 'var(--text-muted)'; ?>;">
-                                    <?php echo $hStatus; ?>
-                                </td>
-                                <td style="padding: 14px 16px; color: <?php echo $tStatus === 'Chưa tập huấn' ? 'var(--red)' : 'var(--text-muted)'; ?>;">
-                                    <?php echo $tStatus; ?>
-                                </td>
-                                <td style="padding: 14px 16px; color: var(--text-muted);">
-                                    <?php echo htmlspecialchars($cert['expire_date']); ?>
-                                </td>
-                                <td style="padding: 14px 16px;">
-                                    <?php if ($cert['status'] === 'active'): ?>
-                                        <span class="status status-green">Đang hiệu lực</span>
-                                    <?php else: ?>
-                                        <span class="status status-red">Hết hạn</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td style="padding: 14px 16px; text-align: right;">
-                                    <button class="btn btn-outline btn-sm" onclick="alert('Tính năng cập nhật hồ sơ đang phát triển!')" style="padding: 4px 8px; font-size: 11px;">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                </td>
-                            </tr>
+<div id="fs-docs">
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+            <form id="form-filter-certificates" action="<?php echo BASE_URL; ?>admin/foodsafety" method="GET" style="display: flex; gap: 8px; margin: 0; flex-wrap: wrap; width: 100%;">
+                <input type="text" name="q" class="form-control" placeholder="Tìm số GCN, tên giấy tờ, tiểu thương..." style="width: 250px; height: 36px; font-size: 13px;">
+                
+                <select name="doc_type" class="form-control" style="width: 180px; height: 36px; font-size: 13px;">
+                    <option value="">Tất cả loại giấy tờ</option>
+                    <option value="ATTP">Giấy chứng nhận ATTP</option>
+                    <option value="Health">Giấy khám sức khỏe</option>
+                    <option value="Training">Giấy xác nhận tập huấn</option>
+                </select>
+                
+                <select name="status" class="form-control" style="width: 160px; height: 36px; font-size: 13px;">
+                    <option value="">Tất cả trạng thái</option>
+                    <?php if (!empty($statuses)): ?>
+                        <?php foreach ($statuses as $st): ?>
+                            <option value="<?php echo htmlspecialchars($st['code']); ?>">
+                                <?php echo htmlspecialchars($st['status_name']); ?>
+                            </option>
                         <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="8" style="padding: 30px; text-align: center; color: var(--text-muted);">Không có dữ liệu chứng nhận ATTP.</td>
-                        </tr>
                     <?php endif; ?>
-                </tbody>
-            </table>
+                </select>
+                
+                <button type="button" id="btn-filter-certificates" class="btn btn-outline" style="height: 36px; padding: 0 16px;">Lọc</button>
+                <a href="<?php echo BASE_URL; ?>admin/foodsafety" class="btn btn-ghost" style="height: 36px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; padding: 0 12px; color: var(--text-muted);">Xóa bộ lọc</a>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
+            <div class="card-title" style="font-size: 16px; font-weight: 600;">Hồ sơ Chứng nhận vệ sinh ATTP & Sức khỏe tiểu thương (<span id="filter-total-certificates"><?php echo count($certificates); ?></span>)</div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="text-align: left; background-color: var(--bg-surface-secondary); border-bottom: 1px solid var(--border-color);">
+                            <th style="padding: 12px 16px;">Tiểu thương</th>
+                            <th style="padding: 12px 16px;">Cơ sở kinh doanh</th>
+                            <th style="padding: 12px 16px; width: 140px;">Loại giấy tờ</th>
+                            <th style="padding: 12px 16px;">Chi tiết hồ sơ</th>
+                            <th style="padding: 12px 16px; width: 150px;">Cơ quan cấp</th>
+                            <th style="padding: 12px 16px; width: 100px;">Ngày cấp</th>
+                            <th style="padding: 12px 16px; width: 100px;">Ngày hết hạn</th>
+                            <th style="padding: 12px 16px; width: 110px; text-align: center;">Hạn còn lại</th>
+                            <th style="padding: 12px 16px; width: 80px; text-align: center;">Tài liệu</th>
+                            <th style="padding: 12px 16px; width: 110px;">Trạng thái</th>
+                            <th style="padding: 12px 16px; text-align: right; width: 110px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body-certificates">
+                        <?php require DIR_TEMPLATE . '/backend/foodsafety/table_rows.php'; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- TAB 2: THANH TRA & VI PHẠM (E.6, E.7, E.8, E.9) -->
+<!-- TAB 2: THANH TRA & VI PHẠM (Giữ nguyên cấu trúc ban đầu) -->
 <div id="fs-inspections" class="card" style="display: none;">
     <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
         <div class="card-title" style="font-size: 16px; font-weight: 600;">Kế hoạch kiểm tra & Nhật ký vi phạm vệ sinh ATTP</div>
     </div>
     <div class="card-body" style="padding: 20px 0 0 0;">
-        <!-- Kế hoạch thanh tra (E.6, E.7) -->
+        <!-- Kế hoạch thanh tra -->
         <div style="padding: 0 20px 20px 20px;">
             <h4 style="font-size: 14px; font-weight: 600; color: var(--text-heading); margin-bottom: 12px;"><i class="fa-solid fa-circle-check text-success me-2"></i> Kế hoạch kiểm tra định kỳ (E.6, E.7)</h4>
             <div class="table-responsive">
@@ -117,7 +105,7 @@
             </div>
         </div>
 
-        <!-- Nhật ký Vi phạm (E.8, E.9) -->
+        <!-- Nhật ký Vi phạm -->
         <div style="padding: 20px 20px 20px 20px; border-top: 1px solid var(--border-color-light);">
             <h4 style="font-size: 14px; font-weight: 600; color: var(--text-heading); margin-bottom: 12px;"><i class="fa-solid fa-circle-exclamation text-danger me-2"></i> Biên bản Ghi nhận & Xử lý Vi phạm (E.8, E.9)</h4>
             <div class="table-responsive">
@@ -147,3 +135,9 @@
 </div>
 
 
+
+<!-- CSRF Token phục vụ AJAX -->
+<?php csrf_field(); ?>
+
+<!-- Nạp JS xử lý AJAX & Form ATTP -->
+<script src="<?php echo BASE_URL; ?>public/assets/js/pages/admin/foodsafety.js?v=<?php echo time(); ?>"></script>

@@ -42,8 +42,13 @@
                     <?php if (!empty($transactions)): ?>
                         <?php foreach ($transactions as $tx): ?>
                             <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td class="cell-mono" style="padding: 14px 16px; font-weight: 600; color: var(--text-heading);">
+                                <td class="cell-mono" style="padding: 14px 16px; font-weight: 600; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
                                     <?php echo htmlspecialchars($tx['transaction_code']); ?>
+                                    <?php if (!empty($tx['attachment_path'])): ?>
+                                        <a href="<?php echo BASE_URL; ?>uploads/finance/<?php echo htmlspecialchars($tx['attachment_path']); ?>" target="_blank" style="color: var(--primary);" title="Xem tệp đính kèm">
+                                            <i class="fa-solid fa-paperclip"></i>
+                                        </a>
+                                    <?php endif; ?>
                                 </td>
                                 <td style="padding: 14px 16px;">
                                     <?php if ($tx['type'] === 'receipt'): ?>

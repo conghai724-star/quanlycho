@@ -6,6 +6,7 @@
 
 # PHP Composer dependencies
 /vendor/
+/temp_superpowers/
 
 # Thư mục chứa file upload của tiểu thương (Không nên đẩy lên Git để tránh nặng repo và lộ thông tin nhạy cảm)
 /uploads/*
@@ -34,3 +35,17 @@ desktop.ini
 
 # Thư mục tạm của agent AI
 .agents/
+.augment/
+.gemini/
+.codegraph/
+.codex/
+.cursor/
+.speci
+
+# Thư mục tạm / rác sinh ra trong quá trình dev/test
+/scratch/
+/strix_runs/
+/z_mau/
+
+# Thư mục build assets
+/public/assets/js/dist/

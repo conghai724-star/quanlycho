@@ -78,4 +78,15 @@ class session {
             exit();
         }
     }
+
+    /**
+     * Yêu cầu vai trò admin (Bảo vệ các tác vụ quản trị)
+     */
+    public static function requireAdmin() {
+        self::requireLogin();
+        if (self::get('user_group') != 1) {
+            header('Location: ' . BASE_URL . 'errors/forbidden');
+            exit();
+        }
+    }
 }

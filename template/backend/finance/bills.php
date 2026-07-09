@@ -9,10 +9,15 @@
         <button class="btn btn-outline" style="height: 36px; padding: 0 16px;">Lọc</button>
     </div>
     
-    <button class="btn btn-primary" onclick="App.finance.simulateBillCalculation()" style="height: 36px; display: inline-flex; align-items: center; gap: 6px;">
-        <i class="fa-solid fa-calculator"></i>
-        Tổng hợp Hóa đơn tháng
-    </button>
+    <div style="display: flex; gap: 8px;">
+        <a href="<?php echo BASE_URL; ?>admin/bill_add" class="btn btn-outline" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+            <i class="fa-solid fa-file-invoice"></i> Lập hóa đơn mới
+        </a>
+        <button class="btn btn-primary" onclick="App.finance.simulateBillCalculation()" style="height: 36px; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-calculator"></i>
+            Tổng hợp Hóa đơn tháng
+        </button>
+    </div>
 </div>
 
 <div class="card">
@@ -38,8 +43,13 @@
                     <?php if (!empty($bills)): ?>
                         <?php foreach ($bills as $bill): ?>
                             <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td class="cell-mono" style="padding: 14px 16px; font-weight: 600; color: var(--text-heading);">
+                                <td class="cell-mono" style="padding: 14px 16px; font-weight: 600; color: var(--text-heading); display: flex; align-items: center; gap: 6px;">
                                     <?php echo htmlspecialchars($bill['bill_code']); ?>
+                                    <?php if (!empty($bill['attachment_path'])): ?>
+                                        <a href="<?php echo BASE_URL; ?>uploads/finance/<?php echo htmlspecialchars($bill['attachment_path']); ?>" target="_blank" style="color: var(--primary);" title="Xem tệp đính kèm">
+                                            <i class="fa-solid fa-paperclip"></i>
+                                        </a>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="cell-mono" style="padding: 14px 16px; font-weight: 600;">
                                     <?php echo htmlspecialchars($bill['stall_code']); ?>

@@ -4,15 +4,24 @@ USE `quanly_cho`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
--- 1. Bảng system_statuses (Từ điển trạng thái hệ thống)
+-- 1. Bảng status_colors (Từ điển màu sắc/giao diện của trạng thái)
+DROP TABLE IF EXISTS `status_colors`;
+CREATE TABLE `status_colors` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `color_class` VARCHAR(50) NOT NULL UNIQUE, -- status-green, status-red, status-orange...
+    `description` VARCHAR(100) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 1.5. Bảng system_statuses (Từ điển trạng thái hệ thống)
 DROP TABLE IF EXISTS `system_statuses`;
 CREATE TABLE `system_statuses` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `entity_type` VARCHAR(50) NOT NULL, -- user, stall, trader, contract, bill, attp, inspection, violation
-    `status_code` VARCHAR(50) NOT NULL, -- active, empty, rented, unpaid, paid, valid, expired...
+    `domain` VARCHAR(50) NOT NULL, -- user, stall, trader, contract, bill, attp, inspection, violation
+    `code` VARCHAR(50) NOT NULL, -- active, empty, rented, unpaid, paid, valid, expired...
     `status_name` VARCHAR(100) NOT NULL, -- Hoạt động, Trống, Đã thuê, Chưa thanh toán...
-    `color_class` VARCHAR(50) NULL,      -- Class CSS hiển thị màu sắc badge (ví dụ: status-green, status-yellow...)
-    UNIQUE KEY `uk_entity_status` (`entity_type`, `status_code`)
+    `color_id` INT NULL,
+    UNIQUE KEY `uk_domain_code` (`domain`, `code`),
+    FOREIGN KEY (`color_id`) REFERENCES `status_colors`(`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 2. Bảng roles (Danh mục vai trò)
@@ -55,6 +64,7 @@ CREATE TABLE `users` (
     `fullname` VARCHAR(100) NOT NULL,
     `email` VARCHAR(100) NULL,
     `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+    `user_group` INT NOT NULL DEFAULT 2, -- 1: Admin, 2: Staff, etc.
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -74,6 +84,8 @@ DROP TABLE IF EXISTS `areas`;
 CREATE TABLE `areas` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `area_name` VARCHAR(100) NOT NULL UNIQUE, -- Khu A, Khu B, Khu Thực Phẩm...
+    `block` VARCHAR(50) NULL,                  -- Dãy (Block)
+    `lot` VARCHAR(50) NULL,                    -- Lô số (Lot)
     `description` TEXT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -87,12 +99,24 @@ CREATE TABLE `stalls` (
     `stall_type` VARCHAR(100) NOT NULL DEFAULT 'Quầy hàng', -- Kiot, Quầy hàng, Mặt bằng trống...
     `area_size` DECIMAL(10, 2) NOT NULL, -- Diện tích m2
     `base_price` DECIMAL(15, 2) NOT NULL, -- Đơn giá thuê/tháng
-    `status` VARCHAR(20) NOT NULL DEFAULT 'empty', -- empty, rented, repairing, locked
+    `status_id` INT NOT NULL DEFAULT 3, -- 3: empty, 4: rented, 5: repairing, 6: locked
     `map_coordinate_x` INT NULL, -- Tọa độ X vẽ sơ đồ
     `map_coordinate_y` INT NULL, -- Tọa độ Y vẽ sơ đồ
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (`area_id`) REFERENCES `areas`(`id`) ON DELETE CASCADE
+    FOREIGN KEY (`area_id`) REFERENCES `areas`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`status_id`) REFERENCES `system_statuses`(`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 8.5. Bảng business_lines (Danh mục Ngành hàng)
+DROP TABLE IF EXISTS `business_lines`;
+CREATE TABLE `business_lines` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `line_code` VARCHAR(50) NOT NULL UNIQUE,
+    `line_name` VARCHAR(100) NOT NULL,
+    `description` TEXT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. Bảng traders (Tiểu thương)
@@ -103,11 +127,15 @@ CREATE TABLE `traders` (
     `fullname` VARCHAR(100) NOT NULL,
     `phone` VARCHAR(15) NOT NULL,
     `cccd` VARCHAR(20) NOT NULL UNIQUE,
+    `business_line_id` INT NULL,
     `address` TEXT NULL,
-    `business_line` VARCHAR(100) NULL, -- Ngành hàng kinh doanh (Thực phẩm, Quần áo...)
-    `status` VARCHAR(20) NOT NULL DEFAULT 'active', -- active, suspended, closed
+    `description` TEXT NULL,           -- Mô tả ngắn về tiểu thương/cửa hàng
+    `license_file` TEXT NULL,          -- Danh sách đường dẫn tài liệu đính kèm (dạng JSON array)
+    `status_id` INT NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`status_id`) REFERENCES `system_statuses`(`id`) ON DELETE RESTRICT,
+    FOREIGN KEY (`business_line_id`) REFERENCES `business_lines`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 10. Bảng contracts (Hợp đồng thuê sạp)
@@ -117,14 +145,18 @@ CREATE TABLE `contracts` (
     `trader_id` INT NOT NULL,
     `stall_id` INT NOT NULL,
     `contract_number` VARCHAR(100) NOT NULL UNIQUE,
+    `name` VARCHAR(255) NOT NULL,
+    `description` TEXT NULL,
+    `contract_file` VARCHAR(255) NULL,
     `start_date` DATE NOT NULL,
     `end_date` DATE NOT NULL,
     `deposit` DECIMAL(15, 2) NOT NULL DEFAULT 0, -- Tiền cọc thuê sạp
-    `status` VARCHAR(20) NOT NULL DEFAULT 'active', -- active, expired, liquidated, terminated
+    `status_id` INT NOT NULL DEFAULT 11,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (`trader_id`) REFERENCES `traders`(`id`) ON DELETE RESTRICT,
-    FOREIGN KEY (`stall_id`) REFERENCES `stalls`(`id`) ON DELETE RESTRICT
+    FOREIGN KEY (`stall_id`) REFERENCES `stalls`(`id`) ON DELETE RESTRICT,
+    FOREIGN KEY (`status_id`) REFERENCES `system_statuses`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 11. Bảng contract_appendices (Phụ lục hợp đồng)
@@ -133,9 +165,11 @@ CREATE TABLE `contract_appendices` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `contract_id` INT NOT NULL,
     `appendix_number` VARCHAR(100) NOT NULL UNIQUE,
+    `name` VARCHAR(255) NOT NULL,
     `sign_date` DATE NOT NULL,
     `effect_date` DATE NOT NULL,
     `content` TEXT NOT NULL, -- Nội dung thay đổi/phụ lục
+    `file` VARCHAR(255) NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (`contract_id`) REFERENCES `contracts`(`id`) ON DELETE CASCADE
@@ -203,13 +237,17 @@ CREATE TABLE `trader_attp` (
     `trader_id` INT NOT NULL,
     `doc_type` VARCHAR(50) NOT NULL, -- ATTP, Health, Training
     `doc_number` VARCHAR(100) NOT NULL, -- Số giấy chứng nhận
+    `name` VARCHAR(255) NOT NULL, -- Tên giấy tờ/chứng nhận
+    `description` TEXT NULL, -- Mô tả ngắn
+    `file` VARCHAR(255) NULL, -- File đính kèm
+    `status_id` INT NOT NULL DEFAULT 18, -- Trạng thái (Còn hạn, Hết hạn...)
     `issuer` VARCHAR(150) NULL, -- Cơ quan cấp
     `issue_date` DATE NOT NULL, -- Ngày cấp
     `expiry_date` DATE NOT NULL, -- Ngày hết hạn
-    `status` VARCHAR(20) NOT NULL DEFAULT 'valid', -- valid, expired
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (`trader_id`) REFERENCES `traders`(`id`) ON DELETE CASCADE
+    FOREIGN KEY (`trader_id`) REFERENCES `traders`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`status_id`) REFERENCES `system_statuses`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 16. Bảng food_safety_inspections (Kế hoạch kiểm tra vệ sinh ATTP)
@@ -254,6 +292,23 @@ CREATE TABLE `system_logs` (
     `user_agent` TEXT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 19. Bảng market_map_elements (Quản lý các phần tử sơ đồ chợ)
+DROP TABLE IF EXISTS `market_map_elements`;
+CREATE TABLE `market_map_elements` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `element_type` VARCHAR(50) NOT NULL, -- stall, gate, door, street, utility, text
+    `element_name` VARCHAR(100) NULL,
+    `stall_id` INT NULL, -- FK liên kết bảng stalls nếu là sạp chợ
+    `pos_x` INT NOT NULL DEFAULT 100,
+    `pos_y` INT NOT NULL DEFAULT 100,
+    `width` INT NOT NULL DEFAULT 80,
+    `height` INT NOT NULL DEFAULT 60,
+    `rotation` INT NOT NULL DEFAULT 0, -- Góc xoay (độ: 0, 90, 180, 270)
+    `color` VARCHAR(20) NULL, -- Mã màu tùy chỉnh cho đường đi/khối tiện ích
+    FOREIGN KEY (`stall_id`) REFERENCES `stalls`(`id`) ON DELETE SET NULL,
+    UNIQUE KEY `uk_stall` (`stall_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

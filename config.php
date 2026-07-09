@@ -19,10 +19,12 @@ define('DIR_MODEL', DIR_ROOT . '/model');
 define('DIR_TEMPLATE', DIR_ROOT . '/template');
 define('DIR_UPLOAD', DIR_ROOT . '/uploads');
 
-// Cấu hình URL cơ sở (Thay đổi tùy thuộc vào tên thư mục chạy trong XAMPP)
+// Cấu hình URL cơ sở (Tự động phát hiện thư mục gốc trên localhost hoặc host trực tuyến)
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-define('BASE_URL', $protocol . '://' . $host . '/quanly_cho/');
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+$subFolder = rtrim(str_replace('/index.php', '', $scriptName), '/');
+define('BASE_URL', $protocol . '://' . $host . ($subFolder ? $subFolder : '') . '/');
 
 // Cấu hình Cơ sở dữ liệu MySQL
 define('DB_HOST', '127.0.0.1:3307');

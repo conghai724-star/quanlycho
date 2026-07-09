@@ -1,4 +1,29 @@
-<!-- Thống kê tỷ lệ lấp đầy sạp chợ (Mục B.9 trong Excel) -->
+<!-- Định nghĩa style tùy biến cho trạng thái Trống (Màu trắng) -->
+<style>
+    .status-white {
+        color: var(--text-muted);
+    }
+    .status-white:before {
+        background: #fff;
+        border: 1px solid var(--border-color);
+    }
+    /* Style tối ưu giao diện sáng tối cho status-white */
+    [data-theme=dark] .status-white:before {
+        background: #1a2332;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+</style>
+
+<!-- Thống kê tỷ lệ lấp đầy sạp chợ thực tế -->
+<?php
+$totalStalls = $stats['total'] ?? 0;
+$rentedStalls = $stats['rented'] ?? 0;
+$emptyStalls = $stats['empty'] ?? 0;
+$repairingStalls = $stats['repairing'] ?? 0;
+
+$rentedPercent = $totalStalls > 0 ? round(($rentedStalls / $totalStalls) * 100) : 0;
+$emptyPercent = $totalStalls > 0 ? round(($emptyStalls / $totalStalls) * 100) : 0;
+?>
 <div class="row col-3" style="margin-bottom: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
     <!-- Sạp đã thuê -->
     <div class="card" style="margin-bottom: 0;">
@@ -7,8 +32,8 @@
             <div class="stat-content">
                 <div class="stat-label">Sạp đã cho thuê</div>
                 <div class="stat-value-row">
-                    <span class="stat-value">3 / 5</span>
-                    <span class="stat-change up" style="color: #34A853;">60% lấp đầy</span>
+                    <span class="stat-value"><?php echo $rentedStalls; ?> / <?php echo $totalStalls; ?></span>
+                    <span class="stat-change up" style="color: #34A853;"><?php echo $rentedPercent; ?>% lấp đầy</span>
                 </div>
             </div>
         </div>
@@ -20,8 +45,8 @@
             <div class="stat-content">
                 <div class="stat-label">Sạp trống sẵn sàng</div>
                 <div class="stat-value-row">
-                    <span class="stat-value">2 / 5</span>
-                    <span class="stat-change up" style="color: #FBBC04;">40% trống</span>
+                    <span class="stat-value"><?php echo $emptyStalls; ?> / <?php echo $totalStalls; ?></span>
+                    <span class="stat-change up" style="color: #FBBC04;"><?php echo $emptyPercent; ?>% trống</span>
                 </div>
             </div>
         </div>
@@ -33,7 +58,7 @@
             <div class="stat-content">
                 <div class="stat-label">Sạp đang bảo trì</div>
                 <div class="stat-value-row">
-                    <span class="stat-value">1 sạp</span>
+                    <span class="stat-value"><?php echo $repairingStalls; ?> sạp</span>
                 </div>
             </div>
         </div>
@@ -42,11 +67,37 @@
 
 <!-- Bộ lọc, Tab chọn & Nút thêm mới -->
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
-    <!-- Nút chuyển đổi Tab -->
-    <div class="segmented" role="radiogroup" style="max-width: 320px;">
-        <label><input type="radio" name="view-mode" value="table" checked onclick="App.stall.switchView('table')"><span>Danh sách bảng</span></label>
-        <label><input type="radio" name="view-mode" value="map" onclick="App.stall.switchView('map')"><span>Sơ đồ sạp chợ (Map)</span></label>
-    </div>
+    <!-- Form Lọc AJAX chuẩn mẫu tiểu thương -->
+    <form action="<?php echo BASE_URL; ?>admin/stalls" method="GET" style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0;">
+        <input type="text" name="q" class="form-control" placeholder="Tìm mã sạp, dãy, lô..." value="<?php echo htmlspecialchars($search ?? ''); ?>" style="width: 240px; height: 36px; font-size: 13px;">
+        
+        <select name="area_id" class="form-control" style="width: 160px; height: 36px; font-size: 13px;">
+            <option value="">Tất cả phân khu</option>
+            <?php if (!empty($areas)): ?>
+                <?php foreach ($areas as $a): ?>
+                    <option value="<?php echo $a['id']; ?>" <?php echo ($area_filter ?? '') == $a['id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($a['area_name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </select>
+        
+        <select name="status" class="form-control" style="width: 160px; height: 36px; font-size: 13px;">
+            <option value="">Tất cả trạng thái</option>
+            <?php if (!empty($statuses)): ?>
+                <?php foreach ($statuses as $st): ?>
+                    <option value="<?php echo htmlspecialchars($st['code']); ?>" <?php echo ($status_filter ?? '') === $st['code'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($st['status_name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </select>
+        
+        <button type="button" id="btn-filter-stalls" class="btn btn-outline" style="height: 36px; padding: 0 16px;">Lọc</button>
+        <?php if (!empty($search) || !empty($area_filter) || !empty($status_filter)): ?>
+            <a href="<?php echo BASE_URL; ?>admin/stalls" class="btn btn-ghost" style="height: 36px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; padding: 0 12px; color: var(--text-muted);">Xóa bộ lọc</a>
+        <?php endif; ?>
+    </form>
     
     <div style="display: flex; gap: 8px;">
         <a href="<?php echo BASE_URL; ?>admin/stall_add" class="btn btn-primary" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: white;">
@@ -56,10 +107,10 @@
     </div>
 </div>
 
-<!-- TAB 1: HIỂN THỊ DẠNG BẢNG (Mặc định) -->
+<!-- TAB 1: HIỂN THỊ DẠNG BẢNG (Dữ liệu thực) -->
 <div id="view-table" class="card">
     <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
-        <div class="card-title" style="font-size: 16px; font-weight: 600;">Danh sách Sạp chợ & Mặt bằng</div>
+        <div class="card-title" style="font-size: 16px; font-weight: 600;">Danh sách Sạp chợ & Mặt bằng (<span id="filter-total-stalls"><?php echo count($stalls); ?></span>)</div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -67,131 +118,25 @@
                 <thead>
                     <tr style="text-align: left; background-color: var(--bg-surface-secondary); border-bottom: 1px solid var(--border-color);">
                         <th style="padding: 12px 16px; width: 120px;">Mã sạp</th>
-                        <th style="padding: 12px 16px;">Phân khu</th>
-                        <th style="padding: 12px 16px;">Vị trí cụ thể</th>
-                        <th style="padding: 12px 16px; width: 120px;">Diện tích</th>
-                        <th style="padding: 12px 16px; width: 150px;">Đơn giá thuê / tháng</th>
-                        <th style="padding: 12px 16px; width: 140px;">Trạng thái</th>
-                        <th style="padding: 12px 16px; text-align: right; width: 120px;">Thao tác</th>
+                        <th style="padding: 12px 16px; width: 160px;">Phân khu</th>
+                        <th style="padding: 12px 16px; width: 160px;">Vị trí cụ thể</th>
+                        <th style="padding: 12px 16px; width: 110px;">Diện tích</th>
+                        <th style="padding: 12px 16px; width: 160px;">Đơn giá thuê / tháng</th>
+                        <th style="padding: 12px 16px;">Tiểu thương thuê</th>
+                        <th style="padding: 12px 16px; width: 120px;">Trạng thái</th>
+                        <th style="padding: 12px 16px; text-align: right; width: 130px;">Thao tác</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <?php if (!empty($stalls)): ?>
-                        <?php foreach ($stalls as $stall): ?>
-                            <tr style="border-bottom: 1px solid var(--border-color);">
-                                <td class="cell-mono" style="padding: 14px 16px; font-weight: 600; color: var(--text-heading);">
-                                    <?php echo htmlspecialchars($stall['stall_code']); ?>
-                                </td>
-                                <td style="padding: 14px 16px;">
-                                    <span class="chip"><?php echo htmlspecialchars($stall['zone']); ?></span>
-                                </td>
-                                <td style="padding: 14px 16px; color: var(--text-muted);">
-                                    <?php echo htmlspecialchars($stall['location']); ?>
-                                </td>
-                                <td style="padding: 14px 16px; font-weight: 600; color: var(--text-heading);">
-                                    <?php echo htmlspecialchars($stall['area']); ?> m²
-                                </td>
-                                <td style="padding: 14px 16px; font-weight: 600; color: var(--primary);">
-                                    <?php echo number_format($stall['price'], 0, ',', '.'); ?> đ
-                                </td>
-                                <td style="padding: 14px 16px;">
-                                    <?php if ($stall['status'] === 'rented'): ?>
-                                        <span class="status status-green">Đã cho thuê</span>
-                                    <?php elseif ($stall['status'] === 'empty'): ?>
-                                        <span class="status status-yellow">Đang trống</span>
-                                    <?php else: ?>
-                                        <span class="status status-red">Đang sửa chữa</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td style="padding: 14px 16px; text-align: right;">
-                                    <div style="display: flex; justify-content: flex-end; gap: 6px;">
-                                        <a href="<?php echo BASE_URL; ?>admin/stall_edit/<?php echo $stall['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none;" title="Chỉnh sửa">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="7" style="padding: 30px; text-align: center; color: var(--text-muted);">Không có dữ liệu sạp.</td>
-                        </tr>
-                    <?php endif; ?>
+                <tbody id="table-body-stalls">
+                    <?php require DIR_TEMPLATE . '/backend/stall/table_rows.php'; ?>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<!-- TAB 2: HIỂN THỊ DẠNG SƠ ĐỒ CHỢ (Mục B.2 trong Excel) -->
-<div id="view-map" class="card" style="display: none;">
-    <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
-        <div class="card-title" style="font-size: 16px; font-weight: 600;">Sơ đồ mặt bằng Kiot sạp chợ trực quan</div>
-    </div>
-    <div class="card-body" style="padding: 24px;">
-        
-        <!-- Chỉ dẫn màu sắc -->
-        <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; font-size: 12px; border-bottom: 1px solid var(--border-color-light); padding-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 14px; height: 14px; background-color: var(--green); border-radius: 4px;"></span>
-                <span>Đã cho thuê (Đang kinh doanh)</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 14px; height: 14px; background-color: var(--yellow); border-radius: 4px;"></span>
-                <span>Sạp trống (Sẵn sàng cho thuê)</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 14px; height: 14px; background-color: var(--red); border-radius: 4px;"></span>
-                <span>Đang bảo trì / Sửa chữa</span>
-            </div>
-        </div>
+<!-- CSRF Token phục vụ AJAX -->
+<?php csrf_field(); ?>
 
-        <!-- Layout Sơ đồ chợ phân theo Phân khu -->
-        <div style="display: flex; flex-direction: column; gap: 32px;">
-            <!-- Phân khu A -->
-            <div>
-                <h4 style="font-size: 14px; font-weight: 600; color: var(--text-heading); margin-bottom: 12px;"><i class="fa-solid fa-shirt text-primary me-2"></i> Khu A (Thời trang - Quần áo)</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px;">
-                    <div onclick="App.stall.clickStall('SẠP-A01', 'rented', 'Nguyễn Thị Thu Hà', 'Quần áo')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
-                        <strong style="display: block; font-size: 15px;">SẠP-A01</strong>
-                        <span style="font-size: 11px; opacity: 0.9;">Đã thuê (Hà)</span>
-                    </div>
-                    <div onclick="App.stall.clickStall('SẠP-A02', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
-                        <strong style="display: block; font-size: 15px;">SẠP-A02</strong>
-                        <span style="font-size: 11px; opacity: 0.8;">Đang trống</span>
-                    </div>
-                    <div onclick="App.stall.clickStall('SẠP-A03', 'rented', 'Phạm Minh Tuấn', 'Thời trang')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
-                        <strong style="display: block; font-size: 15px;">SẠP-A03</strong>
-                        <span style="font-size: 11px; opacity: 0.9;">Đã thuê (Tuấn)</span>
-                    </div>
-                    <div onclick="App.stall.clickStall('SẠP-A04', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
-                        <strong style="display: block; font-size: 15px;">SẠP-A04</strong>
-                        <span style="font-size: 11px; opacity: 0.8;">Đang trống</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Phân khu B -->
-            <div>
-                <h4 style="font-size: 14px; font-weight: 600; color: var(--text-heading); margin-bottom: 12px;"><i class="fa-solid fa-apple-whole text-success me-2"></i> Khu B (Thực phẩm tươi sống)</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px;">
-                    <div onclick="App.stall.clickStall('SẠP-B01', 'rented', 'Trần Văn Hoàng', 'Thịt gia súc')" style="background-color: var(--green); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
-                        <strong style="display: block; font-size: 15px;">SẠP-B01</strong>
-                        <span style="font-size: 11px; opacity: 0.9;">Đã thuê (Hoàng)</span>
-                    </div>
-                    <div onclick="App.stall.clickStall('SẠP-B02', 'repairing', '', '')" style="background-color: var(--red); color: white; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
-                        <strong style="display: block; font-size: 15px;">SẠP-B02</strong>
-                        <span style="font-size: 11px; opacity: 0.9;">Đang sửa chữa</span>
-                    </div>
-                    <div onclick="App.stall.clickStall('SẠP-B03', 'empty', '', '')" style="background-color: var(--yellow); color: #000; padding: 20px; border-radius: var(--radius); cursor: pointer; text-align: center;">
-                        <strong style="display: block; font-size: 15px;">SẠP-B03</strong>
-                        <span style="font-size: 11px; opacity: 0.8;">Đang trống</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-</div>
-
-
+<!-- Nạp JS xử lý AJAX & Form sạp chợ -->
+<script src="<?php echo BASE_URL; ?>public/assets/js/pages/admin/stall.js?v=<?php echo time(); ?>"></script>

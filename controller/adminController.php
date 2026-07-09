@@ -5,8 +5,8 @@
 class adminController {
     
     public function __construct() {
-        // Bảo vệ toàn bộ khu vực admin, yêu cầu phải đăng nhập
-        session::requireLogin();
+        // Bảo vệ toàn bộ khu vực admin, yêu cầu phải đăng nhập với quyền admin
+        session::requireAdmin();
     }
 
     /**
@@ -43,17 +43,50 @@ class adminController {
      * Phân hệ Quản lý Sạp chợ
      */
     public function stalls() {
-        $stalls = [
-            ['id' => 1, 'stall_code' => 'SẠP-A01', 'zone' => 'Khu A (Quần áo)', 'location' => 'Dãy A, Số 01', 'area' => 15, 'price' => 3000000, 'status' => 'rented'],
-            ['id' => 2, 'stall_code' => 'SẠP-A02', 'zone' => 'Khu A (Quần áo)', 'location' => 'Dãy A, Số 02', 'area' => 15, 'price' => 3000000, 'status' => 'empty'],
-            ['id' => 3, 'stall_code' => 'SẠP-B01', 'zone' => 'Khu B (Thực phẩm)', 'location' => 'Dãy B, Số 01', 'area' => 20, 'price' => 4500000, 'status' => 'rented'],
-            ['id' => 4, 'stall_code' => 'SẠP-B02', 'zone' => 'Khu B (Thực phẩm)', 'location' => 'Dãy B, Số 02', 'area' => 20, 'price' => 4500000, 'status' => 'repairing'],
-            ['id' => 5, 'stall_code' => 'SẠP-C01', 'zone' => 'Khu C (Ăn uống)', 'location' => 'Dãy C, Số 01', 'area' => 25, 'price' => 5000000, 'status' => 'empty'],
+        $areaId = $_GET['area_id'] ?? '';
+        $status = $_GET['status'] ?? '';
+        $search = $_GET['q'] ?? '';
+
+        $stallModel = new stallModel();
+        
+        $stalls = [];
+        $areas = [];
+        $statuses = [];
+        $stats = [
+            'total' => 0,
+            'rented' => 0,
+            'empty' => 0,
+            'repairing' => 0,
+            'locked' => 0
         ];
+
+        try {
+            $stalls = $stallModel->getAll($areaId ?: null, $status ?: null, $search ?: null);
+            $areas = $stallModel->getAreas();
+            $statuses = $stallModel->getStallStatuses();
+
+            // Lấy toàn bộ sạp để tính thống kê
+            $allStalls = $stallModel->getAll();
+            $stats['total'] = count($allStalls);
+            foreach ($allStalls as $s) {
+                if ($s['status'] === 'rented') $stats['rented']++;
+                elseif ($s['status'] === 'empty') $stats['empty']++;
+                elseif ($s['status'] === 'repairing') $stats['repairing']++;
+                elseif ($s['status'] === 'locked') $stats['locked']++;
+            }
+        } catch (Exception $e) {
+            error_log('[stalls] EXCEPTION: ' . $e->getMessage());
+        }
 
         $this->view('backend/stall/index', [
             'title' => 'Quản Lý Sạp Chợ',
-            'stalls' => $stalls
+            'stalls' => $stalls,
+            'areas' => $areas,
+            'statuses' => $statuses,
+            'stats' => $stats,
+            'search' => $search,
+            'area_filter' => $areaId,
+            'status_filter' => $status
         ]);
     }
 
@@ -61,15 +94,26 @@ class adminController {
      * Phân hệ Hợp đồng thuê sạp
      */
     public function contracts() {
-        $contracts = [
-            ['id' => 1, 'contract_code' => 'HĐ-2026-0001', 'trader_name' => 'Nguyễn Thị Thu Hà', 'stall_code' => 'SẠP-A01', 'start_date' => '01/01/2026', 'end_date' => '31/12/2026', 'price' => 3000000, 'deposit' => 6000000, 'status' => 'active'],
-            ['id' => 2, 'contract_code' => 'HĐ-2026-0002', 'trader_name' => 'Trần Văn Hoàng', 'stall_code' => 'SẠP-B01', 'start_date' => '15/02/2026', 'end_date' => '15/02/2027', 'price' => 4500000, 'deposit' => 9000000, 'status' => 'active'],
-            ['id' => 3, 'contract_code' => 'HĐ-2025-0089', 'trader_name' => 'Phạm Minh Tuấn', 'stall_code' => 'SẠP-A02', 'start_date' => '01/01/2025', 'end_date' => '31/12/2025', 'price' => 3000000, 'deposit' => 6000000, 'status' => 'expired'],
-        ];
+        $status = $_GET['status'] ?? '';
+        $search = $_GET['q'] ?? '';
+        $contractModel = new contractModel();
+        
+        $contracts = [];
+        $statuses = [];
+        
+        try {
+            $contracts = $contractModel->getAll($status ?: null, $search ?: null);
+            $statuses = $contractModel->getContractStatuses();
+        } catch (Exception $e) {
+            error_log('[contracts] EXCEPTION: ' . $e->getMessage());
+        }
 
         $this->view('backend/contract/index', [
             'title' => 'Hợp Đồng Thuê Sạp',
-            'contracts' => $contracts
+            'contracts' => $contracts,
+            'statuses' => $statuses,
+            'status_filter' => $status,
+            'search' => $search
         ]);
     }
 
@@ -118,18 +162,26 @@ class adminController {
         ]);
     }
 
-    /**
-     * Phân hệ An toàn thực phẩm
-     */
     public function foodsafety() {
-        $certificates = [
-            ['id' => 1, 'trader_name' => 'Trần Văn Hoàng', 'shop_name' => 'Hộ kinh doanh Hoàng Thực Phẩm', 'cert_code' => '123/2025/ATTP-HN', 'issue_date' => '10/05/2025', 'expire_date' => '10/05/2028', 'status' => 'active'],
-            ['id' => 2, 'trader_name' => 'Lê Thị Mai', 'shop_name' => 'Hộ rau sạch Mai Lê', 'cert_code' => '456/2024/ATTP-HN', 'issue_date' => '12/03/2024', 'expire_date' => '12/03/2027', 'status' => 'active'],
-        ];
+        $foodsafetyModel = new foodsafetyModel();
+        
+        $certificates = [];
+        $statuses = [];
+
+        try {
+            // Tự động cập nhật trạng thái hết hạn trước khi hiển thị
+            $foodsafetyModel->autoUpdateExpiryStatus();
+            
+            $certificates = $foodsafetyModel->getCertificates();
+            $statuses = $foodsafetyModel->getAttpStatuses();
+        } catch (Exception $e) {
+            error_log('[foodsafety] EXCEPTION: ' . $e->getMessage());
+        }
 
         $this->view('backend/foodsafety/index', [
             'title' => 'An Toàn Thực Phẩm',
-            'certificates' => $certificates
+            'certificates' => $certificates,
+            'statuses' => $statuses
         ]);
     }
 
@@ -137,11 +189,8 @@ class adminController {
      * Phân hệ Quản lý tài khoản & phân quyền
      */
     public function users() {
-        $users = [
-            ['id' => 1, 'username' => 'admin', 'fullname' => 'Ban Quản Lý Chợ', 'email' => 'admin@market.com', 'role' => 'admin', 'role_name' => 'Quản trị hệ thống', 'status' => 'active'],
-            ['id' => 2, 'username' => 'ketoan_an', 'fullname' => 'Nguyễn Văn An', 'email' => 'an.nv@market.com', 'role' => 'staff', 'role_name' => 'Kế toán', 'status' => 'active'],
-            ['id' => 3, 'username' => 'thuquy_binh', 'fullname' => 'Lê Thị Bình', 'email' => 'binh.lt@market.com', 'role' => 'staff', 'role_name' => 'Thủ quỹ / Nhân viên', 'status' => 'active'],
-        ];
+        $userModel = new userModel();
+        $users = $userModel->getAll();
 
         $this->view('backend/user/index', [
             'title' => 'Tài Khoản & Phân Quyền',
@@ -150,40 +199,87 @@ class adminController {
     }
 
     /**
-     * Thêm Sạp chợ mới (Mockup Form)
+     * Thêm Sạp chợ mới (chỉ GET - hiển thị form)
      */
     public function stall_add() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            session::set('success_message', 'Khai báo sạp chợ mới thành công!');
-            header('Location: ' . BASE_URL . 'admin/stalls');
-            exit();
+        $stallModel = new stallModel();
+        $areas = [];
+        $statuses = [];
+
+        try {
+            $areas = $stallModel->getAreas();
+            $statuses = $stallModel->getStallStatuses();
+        } catch (Exception $e) {
+            error_log('[stall_add] EXCEPTION: ' . $e->getMessage());
         }
-        $this->view('backend/stall/add', ['title' => 'Khai Báo Sạp Chợ Mới']);
+
+        $this->view('backend/stall/add', [
+            'title'    => 'Khai Báo Sạp Chợ Mới',
+            'data'     => ['area_id' => '', 'stall_code' => '', 'stall_type' => 'Quầy hàng', 'area_size' => '', 'base_price' => '', 'status_id' => 3],
+            'areas'    => $areas,
+            'statuses' => $statuses
+        ]);
     }
 
     /**
-     * Chỉnh sửa Sạp chợ (Mockup Form)
+     * Chỉnh sửa Sạp chợ (chỉ GET - hiển thị form)
      */
     public function stall_edit($id) {
-        $stall = ['id' => $id, 'stall_code' => 'SẠP-A01', 'zone' => 'Khu A (Quần áo)', 'location' => 'Dãy A, Số 01', 'area' => 15, 'price' => 3000000, 'status' => 'rented'];
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            session::set('success_message', 'Cập nhật thông tin sạp chợ thành công!');
+        if (!$id) {
             header('Location: ' . BASE_URL . 'admin/stalls');
             exit();
         }
-        $this->view('backend/stall/edit', ['title' => 'Chỉnh Sửa Sạp Chợ', 'stall' => $stall]);
+
+        $stallModel = new stallModel();
+        $stall = null;
+        $areas = [];
+        $statuses = [];
+
+        try {
+            $stall = $stallModel->getById($id);
+            if (!$stall) {
+                throw new Exception('Không tìm thấy sạp chợ yêu cầu.');
+            }
+            $areas = $stallModel->getAreas();
+            $statuses = $stallModel->getStallStatuses();
+        } catch (Exception $e) {
+            session::set('error_message', $e->getMessage());
+            header('Location: ' . BASE_URL . 'admin/stalls');
+            exit();
+        }
+
+        $this->view('backend/stall/edit', [
+            'title'    => 'Chỉnh Sửa Sạp Chợ',
+            'stall'    => $stall,
+            'areas'    => $areas,
+            'statuses' => $statuses
+        ]);
     }
 
     /**
-     * Lập Hợp đồng mới (Mockup Form)
+     * Lập Hợp đồng mới
      */
     public function contract_add() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            session::set('success_message', 'Lập hợp đồng thuê sạp thành công!');
-            header('Location: ' . BASE_URL . 'admin/contracts');
-            exit();
+        $traders = [];
+        $emptyStalls = [];
+        
+        try {
+            $traderModel = new traderModel();
+            // Lấy tiểu thương hoạt động
+            $traders = $traderModel->getAllTraders('', '', 'active');
+            
+            $stallModel = new stallModel();
+            // Lấy các sạp trống
+            $emptyStalls = $stallModel->getAll(null, 'empty');
+        } catch (Exception $e) {
+            error_log('[contract_add] EXCEPTION: ' . $e->getMessage());
         }
-        $this->view('backend/contract/add', ['title' => 'Lập Hợp Đồng Thuê Sạp']);
+
+        $this->view('backend/contract/add', [
+            'title' => 'Lập Hợp Đồng Thuê Sạp',
+            'traders' => $traders,
+            'emptyStalls' => $emptyStalls
+        ]);
     }
 
     /**
@@ -196,6 +292,33 @@ class adminController {
             exit();
         }
         $this->view('backend/finance/utility_add', ['title' => 'Ghi Số Điện Nước Mới']);
+    }
+
+    /**
+     * Lập hóa đơn mới (Mockup Form / View Action)
+     */
+    public function bill_add() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            session::set('success_message', 'Lập hóa đơn mới thành công!');
+            header('Location: ' . BASE_URL . 'admin/bills');
+            exit();
+        }
+
+        $contracts = [];
+        try {
+            $contractModel = new contractModel();
+            $contracts = $contractModel->getAll();
+        } catch (Exception $e) {
+            $contracts = [
+                ['id' => 1, 'contract_code' => 'HĐ-2026-0001', 'trader_name' => 'Nguyễn Thị Thu Hà', 'stall_code' => 'SẠP-A01'],
+                ['id' => 2, 'contract_code' => 'HĐ-2026-0002', 'trader_name' => 'Trần Văn Hoàng', 'stall_code' => 'SẠP-B01'],
+            ];
+        }
+
+        $this->view('backend/finance/bill_add', [
+            'title' => 'Lập Hóa Đơn Mới',
+            'contracts' => $contracts
+        ]);
     }
 
     /**
@@ -215,153 +338,321 @@ class adminController {
         ]);
     }
 
-    /**
-     * Khai báo chứng nhận ATTP mới (Mockup Form)
-     */
     public function foodsafety_add() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            session::set('success_message', 'Khai báo chứng nhận ATTP thành công!');
+        $traders = [];
+        try {
+            $traderModel = new traderModel();
+            // Lấy danh sách tiểu thương đang hoạt động
+            $traders = $traderModel->getAllTraders(null, null, 'active');
+        } catch (Exception $e) {
+            error_log('[foodsafety_add] EXCEPTION: ' . $e->getMessage());
+        }
+
+        $this->view('backend/foodsafety/add', [
+            'title' => 'Khai Báo Chứng Nhận ATTP',
+            'traders' => $traders
+        ]);
+    }
+
+    public function foodsafety_edit() {
+        $id = $_GET['id'] ?? null;
+        if (!$id) {
             header('Location: ' . BASE_URL . 'admin/foodsafety');
             exit();
         }
-        $this->view('backend/foodsafety/add', ['title' => 'Khai Báo Chứng Nhận ATTP']);
+
+        $certificate = null;
+        $traders = [];
+        try {
+            $foodsafetyModel = new foodsafetyModel();
+            $certificate = $foodsafetyModel->getById($id);
+            if (!$certificate) {
+                header('Location: ' . BASE_URL . 'admin/foodsafety');
+                exit();
+            }
+
+            $traderModel = new traderModel();
+            // Lấy danh sách tiểu thương đang hoạt động
+            $traders = $traderModel->getAllTraders('', '', 'active');
+        } catch (Exception $e) {
+            error_log('[foodsafety_edit] EXCEPTION: ' . $e->getMessage());
+        }
+
+        $this->view('backend/foodsafety/edit', [
+            'title' => 'Chỉnh Sửa Chứng Nhận ATTP',
+            'certificate' => $certificate,
+            'traders' => $traders
+        ]);
+    }
+
+    /**
+     * Trang thiết lập sơ đồ chợ tương tác dành cho Admin
+     */
+    public function map_editor() {
+        $stalls = [];
+        $unmappedStalls = [];
+        try {
+            $mapModel = new mapModel();
+            $unmappedStalls = $mapModel->getUnmappedStalls();
+            
+            $db = database::getInstance();
+            $stalls = $db->select("SELECT s.id, s.stall_code, s.stall_type, s.area_size, s.base_price, 
+                                          ss.status_name, ss.code AS status_code, sc.color_class,
+                                          a.area_name, a.block, a.lot,
+                                          t.fullname AS trader_name, t.phone AS trader_phone,
+                                          con.contract_number, con.end_date AS contract_end_date
+                                   FROM stalls s 
+                                   LEFT JOIN areas a ON s.area_id = a.id
+                                   JOIN system_statuses ss ON s.status_id = ss.id 
+                                   LEFT JOIN status_colors sc ON ss.color_id = sc.id
+                                   LEFT JOIN contracts con ON con.stall_id = s.id AND con.status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active')
+                                   LEFT JOIN traders t ON con.trader_id = t.id
+                                   WHERE ss.code != '99' 
+                                   ORDER BY s.stall_code ASC");
+        } catch (Exception $e) {
+            error_log('[map_editor] EXCEPTION: ' . $e->getMessage());
+        }
+
+        $this->view('backend/map/editor', [
+            'title' => 'Thiết lập Sơ đồ chợ tương tác',
+            'unmappedStalls' => $unmappedStalls,
+            'stalls' => $stalls
+        ]);
     }
 
     /**
      * Tạo tài khoản nhân viên mới (Mockup Form)
      */
     public function user_add() {
+        $error = '';
+        $data = [
+            'username' => '',
+            'fullname' => '',
+            'email' => '',
+            'role' => 'staff',
+            'status' => 'active'
+        ];
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            session::set('success_message', 'Tạo tài khoản nhân viên thành công!');
+            $data['username'] = trim($_POST['username'] ?? '');
+            $data['fullname'] = trim($_POST['fullname'] ?? '');
+            $data['email'] = trim($_POST['email'] ?? '');
+            $data['password'] = $_POST['password'] ?? '';
+            $data['role'] = $_POST['role'] ?? 'staff';
+            $data['status'] = $_POST['status'] ?? 'active';
+
+            $user_group = ($data['role'] === 'admin') ? 1 : 2;
+            $is_active = ($data['status'] === 'active') ? 1 : 0;
+
+            $validator = new validator();
+            $validator->required('username', $data['username'], 'Vui lòng nhập tên đăng nhập.')
+                      ->required('password', $data['password'], 'Vui lòng nhập mật khẩu.')
+                      ->required('fullname', $data['fullname'], 'Vui lòng nhập họ tên.')
+                      ->email('email', $data['email'], 'Email không đúng định dạng.');
+
+            if ($validator->isValid()) {
+                $userModel = new userModel();
+                if ($userModel->getByUsername($data['username'])) {
+                    $error = 'Tên đăng nhập đã tồn tại.';
+                } else if ($data['email'] && $userModel->getByEmail($data['email'])) {
+                    $error = 'Email này đã được đăng ký cho tài khoản khác.';
+                } else {
+                    try {
+                        $userModel->create([
+                            'username' => $data['username'],
+                            'password' => $data['password'],
+                            'fullname' => $data['fullname'],
+                            'email' => $data['email'],
+                            'user_group' => $user_group,
+                            'is_active' => $is_active
+                        ]);
+                        session::set('success_message', 'Tạo tài khoản nhân viên thành công!');
+                        header('Location: ' . BASE_URL . 'admin/users');
+                        exit();
+                    } catch (Exception $e) {
+                        $error = 'Lỗi hệ thống: ' . $e->getMessage();
+                    }
+                }
+            } else {
+                $errors = $validator->getErrors();
+                $error = reset($errors);
+            }
+        }
+
+        $this->view('backend/user/add', [
+            'title' => 'Tạo Tài Khoản Nhân Viên',
+            'data' => $data,
+            'error' => $error
+        ]);
+    }
+
+    /**
+     * Chỉnh sửa tài khoản nhân viên
+     */
+    public function user_edit($id = null) {
+        if (!$id) {
             header('Location: ' . BASE_URL . 'admin/users');
             exit();
         }
-        $this->view('backend/user/add', ['title' => 'Tạo Tài Khoản Nhân Viên']);
+
+        $userModel = new userModel();
+        $user = $userModel->getById($id);
+        if (!$user) {
+            session::set('error_message', 'Không tìm thấy tài khoản nhân viên.');
+            header('Location: ' . BASE_URL . 'admin/users');
+            exit();
+        }
+
+        $error = '';
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $fullname = trim($_POST['fullname'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $password = $_POST['password'] ?? '';
+            $role = $_POST['role'] ?? 'staff';
+            $status = $_POST['status'] ?? 'active';
+
+            $user_group = ($role === 'admin') ? 1 : 2;
+            $is_active = ($status === 'active') ? 1 : 0;
+
+            $validator = new validator();
+            $validator->required('fullname', $fullname, 'Vui lòng nhập họ tên.')
+                      ->email('email', $email, 'Email không đúng định dạng.');
+
+            if ($validator->isValid()) {
+                $dupUser = $userModel->getByEmail($email);
+                if ($dupUser && $dupUser['id'] != $id) {
+                    $error = 'Email này đã được sử dụng bởi một tài khoản khác.';
+                } else {
+                    try {
+                        $userModel->update($id, [
+                            'fullname' => $fullname,
+                            'email' => $email,
+                            'user_group' => $user_group,
+                            'is_active' => $is_active
+                        ]);
+
+                        if (!empty($password)) {
+                            $userModel->updatePassword($id, $password);
+                        }
+
+                        session::set('success_message', 'Cập nhật tài khoản nhân viên thành công!');
+                        header('Location: ' . BASE_URL . 'admin/users');
+                        exit();
+                    } catch (Exception $e) {
+                        $error = 'Lỗi hệ thống: ' . $e->getMessage();
+                    }
+                }
+            } else {
+                $errors = $validator->getErrors();
+                $error = reset($errors);
+            }
+
+            // Tải lại thông tin mới vừa post để hiển thị nếu có lỗi
+            $user['fullname'] = $fullname;
+            $user['email'] = $email;
+            $user['user_group'] = $user_group;
+            $user['is_active'] = $is_active;
+        }
+
+        $this->view('backend/user/edit', [
+            'title' => 'Chỉnh Sửa Tài Khoản Nhân Viên',
+            'user' => $user,
+            'error' => $error
+        ]);
+    }
+
+    /**
+     * Khóa/Mở khóa tài khoản nhân viên (AJAX POST)
+     */
+    public function user_toggle_status($id = null) {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $id) {
+            $userModel = new userModel();
+            $user = $userModel->getById($id);
+            if ($user) {
+                if ($user['id'] == session::get('user_id')) {
+                    echo json_encode(['success' => false, 'message' => 'Bạn không thể tự khóa tài khoản của chính mình!']);
+                    exit();
+                }
+
+                $newStatus = $user['is_active'] == 1 ? 0 : 1;
+                $userModel->update($id, [
+                    'fullname' => $user['fullname'],
+                    'email' => $user['email'],
+                    'user_group' => $user['user_group'],
+                    'is_active' => $newStatus
+                ]);
+
+                echo json_encode(['success' => true, 'new_status' => $newStatus]);
+                exit();
+            }
+        }
+        echo json_encode(['success' => false, 'message' => 'Yêu cầu không hợp lệ.']);
+        exit();
     }
 
     /**
      * Phân hệ Quản lý Tiểu thương
      */
     public function traders() {
-        $traderModel = new merchantModel();
+        $traderModel = new traderModel();
+        
+        $search = $_GET['q'] ?? '';
+        $business_line = $_GET['business_line'] ?? '';
+        $status = $_GET['status'] ?? '';
+        
         $traders = [];
+        $business_lines = [];
+        $statuses = [];
         
         try {
-            // Thử lấy dữ liệu từ Database
-            $traders = $traderModel->getAll();
+            // Lấy danh sách tiểu thương theo bộ lọc
+            $traders = $traderModel->getAllTraders($search, $business_line, $status);
+            $statuses = $traderModel->getTraderStatuses();
+            
+            // Lấy danh sách các ngành hàng từ DB
+            $business_lines = $traderModel->getBusinessLines();
         } catch (Exception $e) {
-            // Nếu chưa kết nối/import database, fallback sang dữ liệu mẫu
-            $traders = [
-                [
-                    'id' => 1,
-                    'trader_code' => 'TT-0001',
-                    'fullname' => 'Nguyễn Thị Thu Hà',
-                    'phone' => '0912.345.678',
-                    'cccd' => '001195001234',
-                    'address' => '12 Phố Huế, Hai Bà Trưng, Hà Nội',
-                    'business_line' => 'Quần áo thời trang',
-                    'status' => 'active'
-                ],
-                [
-                    'id' => 2,
-                    'trader_code' => 'TT-0002',
-                    'fullname' => 'Trần Văn Hoàng',
-                    'phone' => '0987.654.321',
-                    'cccd' => '002196005678',
-                    'address' => '45 Đại Cồ Việt, Bách Khoa, Hà Nội',
-                    'business_line' => 'Thịt gia súc, gia cầm',
-                    'status' => 'active'
-                ],
-                [
-                    'id' => 3,
-                    'trader_code' => 'TT-0003',
-                    'fullname' => 'Phạm Minh Tuấn',
-                    'phone' => '0905.112.233',
-                    'cccd' => '003197009012',
-                    'address' => '78 Lò Đúc, Đống Đa, Hà Nội',
-                    'business_line' => 'Quần áo trẻ em',
-                    'status' => 'active'
-                ],
-                [
-                    'id' => 4,
-                    'trader_code' => 'TT-0004',
-                    'fullname' => 'Lê Thị Mai',
-                    'phone' => '0934.556.677',
-                    'cccd' => '004198003456',
-                    'address' => '99 Bạch Mai, Hai Bà Trưng, Hà Nội',
-                    'business_line' => 'Rau củ quả sạch',
-                    'status' => 'active'
-                ]
-            ];
+            // Fallback khi lỗi cơ sở dữ liệu
+            error_log('[traders] EXCEPTION: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            $traders = [];
+            $business_lines = [];
+            $statuses = [];
         }
 
-        $this->view('backend/merchant/index', [
+        $this->view('backend/trader/index', [
             'title' => 'Quản Lý Tiểu Thương',
-            'traders' => $traders
+            'traders' => $traders,
+            'business_lines' => $business_lines,
+            'statuses' => $statuses,
+            'search' => $search,
+            'business_line_filter' => $business_line,
+            'status_filter' => $status
         ]);
     }
 
     /**
-     * Thêm tiểu thương mới (GET/POST)
+     * Thêm tiểu thương mới (chỉ GET - hiển thị form)
      */
     public function trader_add() {
-        $error = '';
-        $success = '';
-        $data = [
-            'trader_code' => '',
-            'fullname' => '',
-            'phone' => '',
-            'cccd' => '',
-            'address' => '',
-            'business_line' => '',
-            'status' => 'active'
-        ];
+        $statuses = [];
+        $business_lines = [];
+        try {
+            $traderModel = new traderModel();
+            $statuses = $traderModel->getTraderStatuses();
+            $business_lines = $traderModel->getBusinessLines();
+        } catch (Exception $e) {}
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $data = [
-                'trader_code'   => $_POST['trader_code'] ?? '',
-                'fullname'      => $_POST['fullname'] ?? '',
-                'phone'         => $_POST['phone'] ?? '',
-                'cccd'          => $_POST['cccd'] ?? '',
-                'address'       => $_POST['address'] ?? '',
-                'business_line' => $_POST['business_line'] ?? '',
-                'status'        => $_POST['status'] ?? 'active'
-            ];
-
-            // Xác thực dữ liệu form
-            $validator = new validator();
-            $validator->required('trader_code', $data['trader_code'], 'Mã tiểu thương không được để trống.')
-                      ->required('fullname', $data['fullname'], 'Họ tên không được để trống.')
-                      ->required('phone', $data['phone'], 'Số điện thoại không được để trống.')
-                      ->phone('phone', $data['phone'], 'Số điện thoại không đúng định dạng Việt Nam.')
-                      ->required('cccd', $data['cccd'], 'Số CCCD không được để trống.');
-
-            if ($validator->isValid()) {
-                $traderModel = new merchantModel();
-                try {
-                    $traderModel->create($data);
-                    // Đăng ký thông báo thành công vào session để hiển thị sau redirect
-                    session::set('success_message', 'Thêm tiểu thương mới thành công!');
-                    header('Location: ' . BASE_URL . 'admin/traders');
-                    exit();
-                } catch (Exception $e) {
-                    $error = 'Lỗi lưu dữ liệu: ' . $e->getMessage();
-                }
-            } else {
-                $errors = $validator->getErrors();
-                $error = reset($errors); // Lấy lỗi đầu tiên để hiển thị
-            }
-        }
-
-        $this->view('backend/merchant/add', [
-            'title' => 'Thêm Tiểu Thương Mới',
-            'error' => $error,
-            'data' => $data
+        $this->view('backend/trader/add', [
+            'title'          => 'Thêm Tiểu Thương Mới',
+            'data'           => ['trader_code' => '', 'fullname' => '', 'phone' => '', 'cccd' => '', 'address' => '', 'business_line_id' => '', 'description' => '', 'status_id' => 7],
+            'statuses'       => $statuses,
+            'business_lines' => $business_lines
         ]);
     }
 
     /**
-     * Sửa thông tin tiểu thương (GET/POST)
+     * Sửa thông tin tiểu thương (chỉ GET - hiển thị form)
      */
     public function trader_edit($id) {
         if (!$id) {
@@ -369,13 +660,12 @@ class adminController {
             exit();
         }
 
-        $traderModel = new merchantModel();
-        $error = '';
-        
+        $traderModel = new traderModel();
+
         try {
-            $trader = $traderModel->getById($id);
+            $trader = $traderModel->getTraderById($id);
             if (!$trader) {
-                throw new Exception("Tiểu thương không tồn tại trên hệ thống.");
+                throw new Exception(message::error('not_found', 'trader'));
             }
         } catch (Exception $e) {
             session::set('error_message', $e->getMessage());
@@ -383,66 +673,166 @@ class adminController {
             exit();
         }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $data = [
-                'fullname'      => $_POST['fullname'] ?? '',
-                'phone'         => $_POST['phone'] ?? '',
-                'cccd'          => $_POST['cccd'] ?? '',
-                'address'       => $_POST['address'] ?? '',
-                'business_line' => $_POST['business_line'] ?? '',
-                'status'        => $_POST['status'] ?? 'active'
-            ];
+        $statuses = [];
+        $business_lines = [];
+        try {
+            $statuses = $traderModel->getTraderStatuses();
+            $business_lines = $traderModel->getBusinessLines();
+        } catch (Exception $e) {}
 
-            // Xác thực dữ liệu
+        $this->view('backend/trader/edit', [
+            'title'          => 'Chỉnh Sửa Tiểu Thương',
+            'trader'         => $trader,
+            'statuses'       => $statuses,
+            'business_lines' => $business_lines
+        ]);
+    }
+
+    /**
+     * Xuất danh sách tiểu thương ra file Excel (.xlsx thật sự)
+     */
+    public function trader_export_excel() {
+        $traderModel = new traderModel();
+        $search = $_GET['q'] ?? '';
+        $business_line = $_GET['business_line'] ?? '';
+        $status = $_GET['status'] ?? '';
+
+        try {
+            $traders = $traderModel->getAllTraders($search, $business_line, $status);
+        } catch (Exception $e) {
+            $traders = [];
+        }
+
+        $headers = ['Mã tiểu thương', 'Họ và tên', 'Số điện thoại', 'Số CCCD', 'Địa chỉ', 'Ngành hàng', 'Trạng thái', 'Công nợ (đ)'];
+        $rows = [];
+        foreach ($traders as $t) {
+            $rows[] = [
+                $t['trader_code'],
+                $t['fullname'],
+                $t['phone'],
+                $t['cccd'],
+                $t['address'] ?? '',
+                $t['business_line_name'] ?? 'Chưa cập nhật',
+                $t['status_name'] ?? 'Không rõ',
+                (int)($t['total_debt'] ?? 0)
+            ];
+        }
+
+        SimpleXlsx::download('danh_sach_tieu_thuong.xlsx', $headers, $rows);
+    }
+
+    /**
+     * Xuất danh sách tiểu thương ra file PDF (tải xuống trực tiếp)
+     */
+    public function trader_export_pdf() {
+        $traderModel = new traderModel();
+        $search = $_GET['q'] ?? '';
+        $business_line = $_GET['business_line'] ?? '';
+        $status = $_GET['status'] ?? '';
+
+        try {
+            $traders = $traderModel->getAllTraders($search, $business_line, $status);
+        } catch (Exception $e) {
+            $traders = [];
+        }
+
+        // Mô tả bộ lọc
+        $filterParts = [];
+        if ($search) $filterParts[] = 'Từ khóa: ' . $search;
+        if ($status) $filterParts[] = 'Trạng thái: ' . $status;
+        if ($business_line && !empty($traders)) {
+            $filterParts[] = 'Ngành hàng: ' . ($traders[0]['business_line_name'] ?? $business_line);
+        }
+        $filterDesc = implode(' | ', $filterParts);
+
+        // Sinh nội dung HTML cho PDF
+        ob_start();
+        $title = 'Báo cáo danh sách tiểu thương';
+        require DIR_TEMPLATE . '/backend/trader/print.php';
+        $html = ob_get_clean();
+
+        // Nạp mPDF từ vendor của dự án khác trên cùng máy chủ
+        $autoload = 'D:/xampp/htdocs/vieclam.vn/application/vendor/autoload.php';
+        if (!file_exists($autoload)) {
+            // Fallback: mở trang HTML nếu mPDF không có
+            header('Content-Type: text/html; charset=utf-8');
+            echo $html;
+            exit();
+        }
+
+        require_once $autoload;
+
+        // mPDF cũ có Deprecated warning trên PHP 8.x — tắt tạm để không in ra output
+        // ponytail: bỏ dòng này khi nâng cấp lên mPDF 8.x mới hơn
+        $prevErrLevel = error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+        ob_start(); // bắt bất kỳ output thừa nào (whitespace, warning leak)
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L',   // A4 ngang để bảng không bị chật
+            'margin_left'   => 12,
+            'margin_right'  => 12,
+            'margin_top'    => 14,
+            'margin_bottom' => 14,
+        ]);
+        $mpdf->SetTitle('Báo cáo tiểu thương');
+        $mpdf->WriteHTML($html);
+
+        ob_end_clean(); // xóa hết output cũ trước khi gửi binary PDF
+        error_reporting($prevErrLevel);
+
+        $mpdf->Output('danh_sach_tieu_thuong.pdf', \Mpdf\Output\Destination::DOWNLOAD);
+        exit();
+    }
+
+
+
+    /**
+     * Đổi mật khẩu cá nhân
+     */
+    public function change_password() {
+        $error = '';
+        $success = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $oldPassword = $_POST['old_password'] ?? '';
+            $newPassword = $_POST['new_password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+
             $validator = new validator();
-            $validator->required('fullname', $data['fullname'], 'Họ tên không được để trống.')
-                      ->required('phone', $data['phone'], 'Số điện thoại không được để trống.')
-                      ->phone('phone', $data['phone'], 'Số điện thoại không đúng định dạng.')
-                      ->required('cccd', $data['cccd'], 'Số CCCD không được để trống.');
+            $validator->required('old_password', $oldPassword, 'Vui lòng nhập mật khẩu hiện tại.')
+                      ->required('new_password', $newPassword, 'Vui lòng nhập mật khẩu mới.')
+                      ->minLength('new_password', $newPassword, 6, 'Mật khẩu mới phải từ 6 ký tự trở lên.')
+                      ->required('confirm_password', $confirmPassword, 'Vui lòng xác nhận mật khẩu mới.')
+                      ->matches('confirm_password', $confirmPassword, $newPassword, 'Xác nhận mật khẩu mới không khớp.');
 
             if ($validator->isValid()) {
-                try {
-                    $traderModel->update($id, $data);
-                    session::set('success_message', 'Cập nhật thông tin tiểu thương thành công!');
-                    header('Location: ' . BASE_URL . 'admin/traders');
-                    exit();
-                } catch (Exception $e) {
-                    $error = 'Lỗi cập nhật: ' . $e->getMessage();
+                $userModel = new userModel();
+                $userId = session::get('user_id');
+                $user = $userModel->getByUsername(session::get('username'));
+
+                if ($user && password_verify($oldPassword, $user['password'])) {
+                    try {
+                        $userModel->updatePassword($userId, $newPassword);
+                        $success = 'Đổi mật khẩu thành công!';
+                    } catch (Exception $e) {
+                        $error = 'Lỗi hệ thống: ' . $e->getMessage();
+                    }
+                } else {
+                    $error = 'Mật khẩu hiện tại không chính xác.';
                 }
             } else {
                 $errors = $validator->getErrors();
                 $error = reset($errors);
             }
-            
-            // Đồng bộ dữ liệu hiển thị lại form nếu có lỗi
-            $trader = array_merge($trader, $data);
         }
 
-        $this->view('backend/merchant/edit', [
-            'title' => 'Chỉnh Sửa Tiểu Thương',
+        $this->view('backend/auth/change_password', [
+            'title' => 'Đổi Mật Khẩu',
             'error' => $error,
-            'trader' => $trader
+            'success' => $success
         ]);
     }
-
-    /**
-     * Xóa tiểu thương (GET)
-     */
-    public function trader_delete($id) {
-        if ($id) {
-            $traderModel = new merchantModel();
-            try {
-                $traderModel->delete($id);
-                session::set('success_message', 'Xóa tiểu thương thành công!');
-            } catch (Exception $e) {
-                session::set('error_message', 'Không thể xóa tiểu thương: ' . $e->getMessage());
-            }
-        }
-        header('Location: ' . BASE_URL . 'admin/traders');
-        exit();
-    }
-
-
 
     /**
      * Hàm render view kèm theo Layout của Admin Dashboard

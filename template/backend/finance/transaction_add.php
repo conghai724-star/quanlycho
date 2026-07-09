@@ -12,7 +12,7 @@
         </div>
     </div>
     <div class="card-body" style="padding: 24px;">
-        <form action="<?php echo BASE_URL; ?>admin/transaction_add" method="POST">
+        <form action="<?php echo BASE_URL; ?>admin/transaction_add" method="POST" enctype="multipart/form-data">
             <?php csrf_field(); ?>
             <!-- Hidden input để giữ loại phiếu -->
             <input type="hidden" name="type" value="<?php echo htmlspecialchars($type); ?>">
@@ -52,9 +52,16 @@
             </div>
 
             <!-- Nội dung chi tiết -->
-            <div class="form-group" style="margin-bottom: 24px;">
+            <div class="form-group" style="margin-bottom: 20px;">
                 <label class="form-label" for="note" style="font-weight: 500;">Nội dung thu/chi chi tiết <span style="color: var(--red)">*</span></label>
                 <textarea id="note" name="note" class="form-control" rows="3" placeholder="Ví dụ: Thu tiền sạp thuê tháng 06/2026..." style="resize: vertical; font-family: inherit; font-size: 13.5px;" required></textarea>
+            </div>
+
+            <!-- Đính kèm file -->
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label class="form-label" for="attachment" style="font-weight: 500;">Tài liệu đính kèm (Ảnh hóa đơn, biên lai, chứng từ...)</label>
+                <input type="file" id="attachment" name="attachment" class="form-control" style="padding: 4px 12px; height: auto;">
+                <small class="text-muted" style="display: block; margin-top: 4px; font-size: 12px;">Định dạng cho phép: JPG, JPEG, PNG, PDF. Dung lượng tối đa: 5MB.</small>
             </div>
 
             <hr style="border: 0; border-top: 1px solid var(--border-color-light); margin: 24px 0;">

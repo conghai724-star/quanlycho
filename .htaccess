@@ -1,9 +1,5 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /quanly_cho/
-
-    # Ngăn việc truy cập danh sách thư mục
-    Options -Indexes
 
     # Nếu là file hoặc thư mục thực tế thì truy cập trực tiếp
     RewriteCond %{REQUEST_FILENAME} !-f
