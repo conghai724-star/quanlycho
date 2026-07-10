@@ -55,12 +55,16 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <!-- Loại sạp -->
                 <div class="form-group">
-                    <label class="form-label" for="stall_type" style="font-weight: 500;">Loại sạp chợ</label>
-                    <select id="stall_type" name="stall_type" class="form-control">
-                        <option value="Quầy hàng" <?php echo ($data['stall_type'] ?? '') === 'Quầy hàng' ? 'selected' : ''; ?>>Quầy hàng</option>
-                        <option value="Kiot" <?php echo ($data['stall_type'] ?? '') === 'Kiot' ? 'selected' : ''; ?>>Kiot</option>
-                        <option value="Mặt bằng trống" <?php echo ($data['stall_type'] ?? '') === 'Mặt bằng trống' ? 'selected' : ''; ?>>Mặt bằng trống</option>
-                        <option value="Khác" <?php echo ($data['stall_type'] ?? '') === 'Khác' ? 'selected' : ''; ?>>Khác</option>
+                    <label class="form-label" for="stall_type_id" style="font-weight: 500;">Loại sạp chợ <span style="color: var(--red)">*</span></label>
+                    <select id="stall_type_id" name="stall_type_id" class="form-control" required>
+                        <option value="">-- Chọn loại sạp --</option>
+                        <?php if (!empty($stallTypes)): ?>
+                            <?php foreach ($stallTypes as $st): ?>
+                                <option value="<?php echo $st['id']; ?>" <?php echo ($data['stall_type_id'] ?? '') == $st['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($st['type_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
 

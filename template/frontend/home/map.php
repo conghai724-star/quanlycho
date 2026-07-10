@@ -132,7 +132,6 @@
         cursor: default;
     }
     .map-element-public.type-street-straight,
-    .map-element-public.type-street-corner,
     .map-element-public.type-fence {
         overflow: hidden;
         padding: 0;
@@ -140,55 +139,42 @@
         border-radius: 2px;
         cursor: default;
     }
-    .map-element-public.type-street-straight {
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)),
-            linear-gradient(90deg, #6f7781, #8d95a0);
-        border-color: #5d6470;
-        color: transparent;
-        border-style: solid;
-    }
-    .map-element-public.type-street-straight::before {
-        content: "";
+
+    .map-element-public.type-street-svg,
+    .map-element-public.type-fence-svg {
         position: absolute;
-        left: 8px;
-        right: 8px;
-        top: 50%;
-        height: 4px;
-        transform: translateY(-50%);
-        border-radius: 999px;
-        background:
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.92) 0 18px, transparent 18px 30px);
+        overflow: visible;
+        pointer-events: none;
+        z-index: 1;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    
+    .map-element-public.type-street-svg polyline,
+    .map-element-public.type-fence-svg polyline {
+        cursor: default;
+        pointer-events: auto;
+    }
+    
+    .map-element-public.type-street-svg .street-bg,
+    .map-element-public.type-fence-svg .fence-bg {
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    
+    .map-element-public.type-street-svg .street-line,
+    .map-element-public.type-fence-svg .fence-line,
+    .map-element-public.type-fence-svg .fence-core {
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .map-element-public.type-street-svg .street-line {
+        stroke-dasharray: 10 15;
+        stroke: rgba(255, 255, 255, 0.85);
         opacity: 0.95;
-    }
-    .map-element-public.type-street-corner {
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)),
-            linear-gradient(90deg, #6f7781, #8d95a0);
-        border-color: #5d6470;
-        color: transparent;
-        border-style: solid;
-    }
-    .map-element-public.type-street-corner::before,
-    .map-element-public.type-street-corner::after {
-        content: "";
-        position: absolute;
-        background: rgba(255,255,255,0.95);
-        border-radius: 999px;
-    }
-    .map-element-public.type-street-corner::before {
-        left: 9px;
-        top: 50%;
-        width: calc(50% + 2px);
-        height: 4px;
-        transform: translateY(-50%);
-    }
-    .map-element-public.type-street-corner::after {
-        left: 50%;
-        top: 9px;
-        width: 4px;
-        height: calc(50% + 2px);
-        transform: translateX(-50%);
     }
     .map-element-public.type-fence {
         background:

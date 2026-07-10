@@ -244,7 +244,6 @@
     }
 
     .map-element-street-straight,
-    .map-element-street-corner,
     .map-element-fence {
         overflow: hidden;
         padding: 0;
@@ -252,60 +251,171 @@
         border-radius: 2px;
     }
 
-    .map-element-street-straight {
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)),
-            linear-gradient(90deg, #6f7781, #8d95a0);
-        border-color: #5d6470;
-        color: transparent;
-        border-style: solid;
+    .map-element-street-svg,
+    .map-element-fence-svg {
+        position: absolute;
+        overflow: visible;
+        pointer-events: none;
+        z-index: 1;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    
+    .map-element-street-svg.selected,
+    .map-element-fence-svg.selected {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .map-element-street-svg polyline,
+    .map-element-fence-svg polyline {
+        cursor: pointer;
+        pointer-events: auto;
+    }
+    
+    .map-element-street-svg .street-bg,
+    .map-element-fence-svg .fence-bg {
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    
+    .map-element-street-svg .street-line,
+    .map-element-fence-svg .fence-line,
+    .map-element-fence-svg .fence-core {
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
 
-    .map-element-street-straight::before {
-        content: "";
-        position: absolute;
-        left: 8px;
-        right: 8px;
-        top: 50%;
-        height: 4px;
-        transform: translateY(-50%);
-        border-radius: 999px;
-        background:
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.92) 0 18px, transparent 18px 30px);
+    .map-element-street-svg .street-line {
+        stroke-dasharray: 10 15;
+        stroke: rgba(255, 255, 255, 0.85);
         opacity: 0.95;
     }
 
-    .map-element-street-corner {
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)),
-            linear-gradient(90deg, #6f7781, #8d95a0);
-        border-color: #5d6470;
-        color: transparent;
-        border-style: solid;
+    .map-element-street-svg.selected .street-bg,
+    .map-element-fence-svg.selected .fence-bg {
+        stroke: #475569 !important; /* highlight color on select */
     }
-
-    .map-element-street-corner::before,
-    .map-element-street-corner::after {
-        content: "";
+    
+    /* Waypoint handle style */
+    .waypoint-handle {
         position: absolute;
-        background: rgba(255,255,255,0.95);
-        border-radius: 999px;
+        width: 14px;
+        height: 14px;
+        background-color: #2196f3;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        margin-left: -7px;
+        margin-top: -7px;
+        cursor: move;
+        z-index: 1000;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        transition: transform 0.1s ease, background-color 0.1s ease;
     }
-
-    .map-element-street-corner::before {
-        left: 9px;
-        top: 50%;
-        width: calc(50% + 2px);
-        height: 4px;
-        transform: translateY(-50%);
+    
+    .waypoint-handle:hover {
+        transform: scale(1.1);
+        background-color: #0d47a1;
     }
-
-    .map-element-street-corner::after {
+    
+    /* Container cho mũi tên bẻ hướng */
+    .waypoint-arrows {
+        position: absolute;
+        display: none;
+        gap: 6px;
         left: 50%;
-        top: 9px;
-        width: 4px;
-        height: calc(50% + 2px);
-        transform: translateX(-50%);
+        top: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 1001;
+    }
+    
+    .waypoint-handle:hover .waypoint-arrows,
+    .midpoint-handle:hover .waypoint-arrows {
+        display: flex;
+        pointer-events: auto;
+    }
+    
+    .waypoint-arrow {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        background-color: #ffffff;
+        border: 1.5px solid #2196f3;
+        color: #2196f3;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        transition: all 0.15s ease;
+        pointer-events: auto;
+        margin-left: -11px;
+        margin-top: -11px;
+    }
+    
+    .waypoint-arrow:hover {
+        background-color: #2196f3;
+        color: #ffffff;
+    }
+    
+    .waypoint-arrow.arrow-right {
+        transform: translate(16px, 0);
+    }
+    .waypoint-arrow.arrow-left {
+        transform: translate(-16px, 0);
+    }
+    .waypoint-arrow.arrow-down {
+        transform: translate(0, 16px);
+    }
+    .waypoint-arrow.arrow-up {
+        transform: translate(0, -16px);
+    }
+    
+    .waypoint-arrow.arrow-right:hover {
+        transform: translate(16px, 0) scale(1.25);
+    }
+    .waypoint-arrow.arrow-left:hover {
+        transform: translate(-16px, 0) scale(1.25);
+    }
+    .waypoint-arrow.arrow-down:hover {
+        transform: translate(0, 16px) scale(1.25);
+    }
+    .waypoint-arrow.arrow-up:hover {
+        transform: translate(0, -16px) scale(1.25);
+    }
+    
+    .waypoint-handle.waypoint-selected {
+        background-color: #f44336;
+        transform: scale(1.3);
+    }
+    
+    /* Nút mờ ở giữa các đoạn thẳng */
+    .midpoint-handle {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background-color: #2196f3;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        margin-left: -5px;
+        margin-top: -5px;
+        cursor: pointer;
+        z-index: 999;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        opacity: 0.55;
+        transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+    
+    .midpoint-handle:hover {
+        opacity: 1;
+        transform: scale(1.3);
+        background-color: #0d47a1;
     }
 
     .map-element-fence {
@@ -362,68 +472,11 @@
     }
 
     .map-element-street-straight,
-    .map-element-street-corner,
     .map-element-fence {
         overflow: hidden;
         padding: 0;
         box-shadow: none;
         border-radius: 2px;
-    }
-
-    .map-element-street-straight {
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)),
-            linear-gradient(90deg, #6f7781, #8d95a0);
-        border-color: #5d6470;
-        color: transparent;
-        border-style: solid;
-    }
-
-    .map-element-street-straight::before {
-        content: "";
-        position: absolute;
-        left: 8px;
-        right: 8px;
-        top: 50%;
-        height: 4px;
-        transform: translateY(-50%);
-        border-radius: 999px;
-        background:
-            repeating-linear-gradient(90deg, rgba(255,255,255,0.92) 0 18px, transparent 18px 30px);
-        opacity: 0.95;
-    }
-
-    .map-element-street-corner {
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)),
-            linear-gradient(90deg, #6f7781, #8d95a0);
-        border-color: #5d6470;
-        color: transparent;
-        border-style: solid;
-    }
-
-    .map-element-street-corner::before,
-    .map-element-street-corner::after {
-        content: "";
-        position: absolute;
-        background: rgba(255,255,255,0.95);
-        border-radius: 999px;
-    }
-
-    .map-element-street-corner::before {
-        left: 9px;
-        top: 50%;
-        width: calc(50% + 2px);
-        height: 4px;
-        transform: translateY(-50%);
-    }
-
-    .map-element-street-corner::after {
-        left: 50%;
-        top: 9px;
-        width: 4px;
-        height: calc(50% + 2px);
-        transform: translateX(-50%);
     }
 
     .map-element-fence {
@@ -553,27 +606,7 @@
         box-shadow: 0 -5px 0 rgba(255,255,255,0.5), 0 5px 0 rgba(255,255,255,0.5);
     }
 
-    .toolbox-preview.street-corner::before,
-    .toolbox-preview.street-corner::after {
-        content: "";
-        position: absolute;
-        background: rgba(255,255,255,0.9);
-        border-radius: 999px;
-    }
 
-    .toolbox-preview.street-corner::before {
-        left: 3px;
-        top: 3px;
-        width: 18px;
-        height: 4px;
-    }
-
-    .toolbox-preview.street-corner::after {
-        left: 3px;
-        top: 3px;
-        width: 4px;
-        height: 12px;
-    }
 
     .toolbox-preview.fence {
         background: repeating-linear-gradient(90deg, #e9ddc9 0 4px, #f8f1e6 4px 8px);
@@ -640,27 +673,7 @@
         box-shadow: 0 -5px 0 rgba(255,255,255,0.5), 0 5px 0 rgba(255,255,255,0.5);
     }
 
-    .toolbox-preview.street-corner::before,
-    .toolbox-preview.street-corner::after {
-        content: "";
-        position: absolute;
-        background: rgba(255,255,255,0.9);
-        border-radius: 999px;
-    }
 
-    .toolbox-preview.street-corner::before {
-        left: 3px;
-        top: 3px;
-        width: 18px;
-        height: 4px;
-    }
-
-    .toolbox-preview.street-corner::after {
-        left: 3px;
-        top: 3px;
-        width: 4px;
-        height: 12px;
-    }
 
     .toolbox-preview.fence {
         background: repeating-linear-gradient(90deg, #e9ddc9 0 4px, #f8f1e6 4px 8px);
@@ -846,11 +859,7 @@
             </div>
             <div class="toolbox-item" data-type="street" draggable="true">
                 <span class="toolbox-preview street-straight"></span>
-                <span>Đường thẳng</span>
-            </div>
-            <div class="toolbox-item" data-type="street-corner" draggable="true">
-                <span class="toolbox-preview street-corner"></span>
-                <span>Đường rẽ góc</span>
+                <span>Đường đi</span>
             </div>
             <div class="toolbox-item" data-type="gate" draggable="true">
                 <i class="fa-solid fa-archway" style="color: #ef6c00;"></i>
@@ -977,8 +986,19 @@
                     </div>
                 </div>
 
+                <!-- Độ rộng đường đi (Nếu là đường đi) -->
+                <div class="property-group" id="group-stroke-width" style="display: none;">
+                    <label for="prop-stroke-width">Độ rộng đường (px)</label>
+                    <input type="number" id="prop-stroke-width" class="property-input" min="10" max="100" step="2" value="24">
+                    <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.4;">
+                        * Kéo thả nút tròn mờ ở giữa các đoạn để bẻ hướng rẽ.<br>
+                        * Kéo thả trực tiếp đường/hàng rào để di chuyển.<br>
+                        * Nhấp đúp vào nút tròn xanh để xóa góc rẽ.
+                    </p>
+                </div>
+
                 <!-- Chiều rộng & Chiều cao -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div id="group-size-dimensions" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="property-group">
                         <label for="prop-w">Chiều rộng (px)</label>
                         <input type="number" id="prop-w" class="property-input" min="20" step="20">
@@ -990,7 +1010,7 @@
                 </div>
 
                 <!-- Góc xoay -->
-                <div class="property-group">
+                <div class="property-group" id="group-rotation-container">
                     <label for="prop-rotation">Góc xoay (Độ)</label>
                     <input type="number" id="prop-rotation" class="property-input" min="0" max="359" step="1" value="0">
                 </div>

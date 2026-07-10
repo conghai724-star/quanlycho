@@ -31,22 +31,25 @@
     const searchInput = document.getElementById('map-search-input');
     const btnSearchStall = document.getElementById('btn-search-stall');
 
+    function isRoadType(type) {
+        return type === 'street' || type === 'fence';
+    }
+
     function isRoadLikeType(type) {
-        return type === 'street' || type === 'street-corner' || type === 'fence';
+        return isRoadType(type);
     }
 
     function isIconOnlyType(type) {
         return !isRoadLikeType(type);
     }
 
+    // Lấy class hiển thị của loại phần tử
     function getElementTypeClass(type) {
         switch (type) {
             case 'street':
-                return 'type-street-straight';
-            case 'street-corner':
-                return 'type-street-corner';
+                return 'type-street-svg';
             case 'fence':
-                return 'type-fence';
+                return 'type-fence-svg';
             case 'security-room':
                 return 'type-security-room';
             default:
@@ -73,6 +76,48 @@
 
     // 2. Khởi tạo
     function init() {
+        // Chuẩn hóa dữ liệu đường đi (SVG / waypoints / backward compat)
+        elements.forEach(item => {
+            if (item.waypoints && typeof item.waypoints === 'string') {
+                try {
+                    item.waypoints = JSON.parse(item.waypoints);
+                } catch (e) {
+                    item.waypoints = [];
+                }
+            }
+
+            if (item.element_type === 'street-corner') {
+                item.element_type = 'street';
+                item.element_name = 'Đường đi';
+                item.stroke_width = 24;
+                item.waypoints = [
+                    { x: parseInt(item.pos_x), y: parseInt(item.pos_y) + (parseInt(item.height) || 120)/2 },
+                    { x: parseInt(item.pos_x) + (parseInt(item.width) || 120)/2, y: parseInt(item.pos_y) + (parseInt(item.height) || 120)/2 },
+                    { x: parseInt(item.pos_x) + (parseInt(item.width) || 120)/2, y: parseInt(item.pos_y) }
+                ];
+            } else if (isRoadType(item.element_type) && (!item.waypoints || item.waypoints.length === 0)) {
+                // Chuyển đổi rect sang 2 waypoints
+                const w = parseInt(item.width) || 120;
+                const h = parseInt(item.height) || (item.element_type === 'fence' ? 16 : 24);
+                const x = parseInt(item.pos_x) || 100;
+                const y = parseInt(item.pos_y) || 100;
+                
+                if (w >= h) {
+                    item.waypoints = [
+                        { x: x, y: y + h/2 },
+                        { x: x + w, y: y + h/2 }
+                    ];
+                    item.stroke_width = h;
+                } else {
+                    item.waypoints = [
+                        { x: x + w/2, y: y },
+                        { x: x + w/2, y: y + h }
+                    ];
+                    item.stroke_width = w;
+                }
+            }
+        });
+
         renderElements();
         setupInteractions();
         setupSearch();
@@ -88,46 +133,76 @@
             div.id = `pub-el-${item.id}`;
             div.classList.toggle('is-icon-only', isIconOnlyType(item.element_type));
             
-            // Gán tọa độ, kích thước, xoay
-            div.style.left = `${item.pos_x}px`;
-            div.style.top = `${item.pos_y}px`;
-            div.style.width = `${item.width}px`;
-            div.style.height = `${item.height}px`;
-            div.style.transform = `rotate(${item.rotation || 0}deg)`;
-            div.style.fontSize = '';
-            div.style.setProperty('--icon-size', '1em');
-            div.style.setProperty('--icon-stretch-x', '1');
-            div.style.setProperty('--icon-stretch-y', '1');
-
-            // Nếu là sạp, tô màu theo trạng thái thực tế từ CSDL
-            if (item.element_type === 'stall') {
-                const colorClass = item.color_class || (item.status_code ? `status-${item.status_code}` : 'status-white');
-                div.classList.add(colorClass);
+            if (isRoadType(item.element_type)) {
+                const isFence = item.element_type === 'fence';
+                const strokeWidth = item.stroke_width || (isFence ? 16 : 24);
+                const bbox = getStreetBoundingBox(item.waypoints, strokeWidth);
                 
-                // Nhãn sạp
-                div.innerHTML = buildElementLabel(item);
+                div.style.left = `${bbox.x}px`;
+                div.style.top = `${bbox.y}px`;
+                div.style.width = `${bbox.w}px`;
+                div.style.height = `${bbox.h}px`;
                 
-                // Click xem chi tiết sạp
-                div.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    showStallTooltip(item, div);
-                });
-            } else {
-                // Nhãn các tiện ích trang trí
-                div.innerHTML = buildElementLabel(item);
+                const pad = strokeWidth / 2;
+                const pointsStr = item.waypoints.map(pt => `${pt.x - bbox.minX + pad},${pt.y - bbox.minY + pad}`).join(' ');
                 
-                // Áp dụng màu sắc nếu có cấu hình tự chọn
-                if (isIconOnlyType(item.element_type)) {
-                    div.style.backgroundColor = 'transparent';
-                    div.style.borderColor = 'transparent';
-                    div.style.boxShadow = 'none';
-                    div.style.color = item.color ? adjustColorBrightness(item.color, -45) : '';
-                } else if (item.color && !isRoadLikeType(item.element_type)) {
-                    div.style.backgroundColor = item.color;
-                    div.style.borderColor = adjustColorBrightness(item.color, -20);
-                    div.style.color = getContrastColor(item.color);
+                if (isFence) {
+                    div.innerHTML = `
+                        <svg width="100%" height="100%" class="fence-svg-container" style="overflow: visible;">
+                            <polyline class="fence-bg" points="${pointsStr}" stroke="${item.color || '#64748b'}" stroke-width="${strokeWidth}" fill="none" />
+                            <polyline class="fence-line" points="${pointsStr}" stroke="#cbd5e1" stroke-width="${Math.max(2, strokeWidth - 4)}" stroke-dasharray="10 8" fill="none" />
+                            <polyline class="fence-core" points="${pointsStr}" stroke="#ffffff" stroke-width="2" fill="none" />
+                        </svg>
+                    `;
+                } else {
+                    div.innerHTML = `
+                        <svg width="100%" height="100%" class="street-svg-container" style="overflow: visible;">
+                            <polyline class="street-bg" points="${pointsStr}" stroke="${item.color || '#8d95a0'}" stroke-width="${strokeWidth}" fill="none" />
+                            <polyline class="street-line" points="${pointsStr}" stroke-width="2" fill="none" />
+                        </svg>
+                    `;
                 }
+            } else {
+                // Gán tọa độ, kích thước, xoay
+                div.style.left = `${item.pos_x}px`;
+                div.style.top = `${item.pos_y}px`;
+                div.style.width = `${item.width}px`;
+                div.style.height = `${item.height}px`;
+                div.style.transform = `rotate(${item.rotation || 0}deg)`;
+                div.style.fontSize = '';
+                div.style.setProperty('--icon-size', '1em');
+                div.style.setProperty('--icon-stretch-x', '1');
+                div.style.setProperty('--icon-stretch-y', '1');
 
+                // Nếu là sạp, tô màu theo trạng thái thực tế từ CSDL
+                if (item.element_type === 'stall') {
+                    const colorClass = item.color_class || (item.status_code ? `status-${item.status_code}` : 'status-white');
+                    div.classList.add(colorClass);
+                    
+                    // Nhãn sạp
+                    div.innerHTML = buildElementLabel(item);
+                    
+                    // Click xem chi tiết sạp
+                    div.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        showStallTooltip(item, div);
+                    });
+                } else {
+                    // Nhãn các tiện ích trang trí
+                    div.innerHTML = buildElementLabel(item);
+                    
+                    // Áp dụng màu sắc nếu có cấu hình tự chọn
+                    if (isIconOnlyType(item.element_type)) {
+                        div.style.backgroundColor = 'transparent';
+                        div.style.borderColor = 'transparent';
+                        div.style.boxShadow = 'none';
+                        div.style.color = item.color ? adjustColorBrightness(item.color, -45) : '';
+                    } else if (item.color && !isRoadLikeType(item.element_type)) {
+                        div.style.backgroundColor = item.color;
+                        div.style.borderColor = adjustColorBrightness(item.color, -20);
+                        div.style.color = getContrastColor(item.color);
+                    }
+                }
             }
 
             if (!isRoadLikeType(item.element_type)) {
@@ -358,8 +433,7 @@
 
     function getTypeNameVietnamese(type) {
         switch (type) {
-            case 'street': return 'Đường thẳng';
-            case 'street-corner': return 'Đường rẽ góc';
+            case 'street': return 'Đường đi';
             case 'fence': return 'Hàng rào';
             case 'security-room': return 'Phòng bảo vệ';
             case 'gate': return 'Cổng chợ';
@@ -402,6 +476,30 @@
         const b = parseInt(hexColor.substring(5, 7), 16);
         const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
         return (yiq >= 128) ? '#000000' : '#FFFFFF';
+    }
+
+    // Tính toán bounding box của đường đi từ waypoints
+    function getStreetBoundingBox(waypoints, strokeWidth = 24) {
+        if (!waypoints || waypoints.length === 0) {
+            return { x: 0, y: 0, w: 40, h: 40, minX: 0, maxX: 0, minY: 0, maxY: 0 };
+        }
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        waypoints.forEach(pt => {
+            const px = parseFloat(pt.x);
+            const py = parseFloat(pt.y);
+            if (px < minX) minX = px;
+            if (px > maxX) maxX = px;
+            if (py < minY) minY = py;
+            if (py > maxY) maxY = py;
+        });
+        
+        const pad = strokeWidth / 2;
+        const x = minX - pad;
+        const y = minY - pad;
+        const w = (maxX - minX) + strokeWidth;
+        const h = (maxY - minY) + strokeWidth;
+        
+        return { x, y, w, h, minX, maxX, minY, maxY };
     }
 
     // Khởi động

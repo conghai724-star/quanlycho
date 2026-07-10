@@ -84,6 +84,12 @@
                 <span class="nav-text">Tài khoản & Quyền</span>
             </a>
 
+            <!-- Danh mục -->
+            <a class="nav-link <?php echo (isset($title) && $title === 'Quản Lý Danh Mục') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/categories">
+                <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19h16M4 15h16M4 11h16M4 7h16"/></svg>
+                <span class="nav-text">Quản lý Danh mục</span>
+            </a>
+
             <!-- Tùy biến chủ đề -->
             <a class="nav-link <?php echo (isset($title) && $title === 'Tùy Biến Giao Diện') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/theme">
                 <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 11H5a2 2 0 00-2 2v2a2 2 0 002 2h2v3a1 1 0 001 1h3a1 1 0 001-1v-3h7a2 2 0 002-2v-2a2 2 0 00-2-2z"/><path d="M19 11V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v6"/></svg>

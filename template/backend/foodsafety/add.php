@@ -28,12 +28,16 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="doc_type" style="font-weight: 500;">Loại giấy tờ <span style="color: var(--red)">*</span></label>
-                    <select id="doc_type" name="doc_type" class="form-control" required>
+                    <label class="form-label" for="doc_type_id" style="font-weight: 500;">Loại giấy tờ <span style="color: var(--red)">*</span></label>
+                    <select id="doc_type_id" name="doc_type_id" class="form-control" required>
                         <option value="">-- Chọn loại giấy tờ --</option>
-                        <option value="ATTP">Giấy chứng nhận cơ sở đủ điều kiện ATTP</option>
-                        <option value="Health">Giấy khám sức khỏe định kỳ</option>
-                        <option value="Training">Giấy xác nhận tập huấn kiến thức ATTP</option>
+                        <?php if (!empty($documentTypes)): ?>
+                            <?php foreach ($documentTypes as $dt): ?>
+                                <option value="<?php echo $dt['id']; ?>">
+                                    <?php echo htmlspecialchars($dt['type_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
             </div>

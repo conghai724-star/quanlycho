@@ -203,21 +203,25 @@ class adminController {
      */
     public function stall_add() {
         $stallModel = new stallModel();
+        $categoryModel = new categoryModel();
         $areas = [];
         $statuses = [];
+        $stallTypes = [];
 
         try {
             $areas = $stallModel->getAreas();
             $statuses = $stallModel->getStallStatuses();
+            $stallTypes = $categoryModel->getItems('stall_type');
         } catch (Exception $e) {
             error_log('[stall_add] EXCEPTION: ' . $e->getMessage());
         }
 
         $this->view('backend/stall/add', [
-            'title'    => 'Khai Báo Sạp Chợ Mới',
-            'data'     => ['area_id' => '', 'stall_code' => '', 'stall_type' => 'Quầy hàng', 'area_size' => '', 'base_price' => '', 'status_id' => 3],
-            'areas'    => $areas,
-            'statuses' => $statuses
+            'title'      => 'Khai Báo Sạp Chợ Mới',
+            'data'       => ['area_id' => '', 'stall_code' => '', 'stall_type_id' => '', 'area_size' => '', 'base_price' => '', 'status_id' => 3],
+            'areas'      => $areas,
+            'statuses'   => $statuses,
+            'stallTypes' => $stallTypes
         ]);
     }
 
@@ -231,9 +235,11 @@ class adminController {
         }
 
         $stallModel = new stallModel();
+        $categoryModel = new categoryModel();
         $stall = null;
         $areas = [];
         $statuses = [];
+        $stallTypes = [];
 
         try {
             $stall = $stallModel->getById($id);
@@ -242,6 +248,7 @@ class adminController {
             }
             $areas = $stallModel->getAreas();
             $statuses = $stallModel->getStallStatuses();
+            $stallTypes = $categoryModel->getItems('stall_type');
         } catch (Exception $e) {
             session::set('error_message', $e->getMessage());
             header('Location: ' . BASE_URL . 'admin/stalls');
@@ -249,10 +256,11 @@ class adminController {
         }
 
         $this->view('backend/stall/edit', [
-            'title'    => 'Chỉnh Sửa Sạp Chợ',
-            'stall'    => $stall,
-            'areas'    => $areas,
-            'statuses' => $statuses
+            'title'      => 'Chỉnh Sửa Sạp Chợ',
+            'stall'      => $stall,
+            'areas'      => $areas,
+            'statuses'   => $statuses,
+            'stallTypes' => $stallTypes
         ]);
     }
 
@@ -340,17 +348,22 @@ class adminController {
 
     public function foodsafety_add() {
         $traders = [];
+        $documentTypes = [];
         try {
             $traderModel = new traderModel();
             // Lấy danh sách tiểu thương đang hoạt động
             $traders = $traderModel->getAllTraders(null, null, 'active');
+
+            $categoryModel = new categoryModel();
+            $documentTypes = $categoryModel->getItems('document_type');
         } catch (Exception $e) {
             error_log('[foodsafety_add] EXCEPTION: ' . $e->getMessage());
         }
 
         $this->view('backend/foodsafety/add', [
             'title' => 'Khai Báo Chứng Nhận ATTP',
-            'traders' => $traders
+            'traders' => $traders,
+            'documentTypes' => $documentTypes
         ]);
     }
 
@@ -363,6 +376,7 @@ class adminController {
 
         $certificate = null;
         $traders = [];
+        $documentTypes = [];
         try {
             $foodsafetyModel = new foodsafetyModel();
             $certificate = $foodsafetyModel->getById($id);
@@ -374,6 +388,9 @@ class adminController {
             $traderModel = new traderModel();
             // Lấy danh sách tiểu thương đang hoạt động
             $traders = $traderModel->getAllTraders('', '', 'active');
+
+            $categoryModel = new categoryModel();
+            $documentTypes = $categoryModel->getItems('document_type');
         } catch (Exception $e) {
             error_log('[foodsafety_edit] EXCEPTION: ' . $e->getMessage());
         }
@@ -381,7 +398,8 @@ class adminController {
         $this->view('backend/foodsafety/edit', [
             'title' => 'Chỉnh Sửa Chứng Nhận ATTP',
             'certificate' => $certificate,
-            'traders' => $traders
+            'traders' => $traders,
+            'documentTypes' => $documentTypes
         ]);
     }
 
@@ -831,6 +849,26 @@ class adminController {
             'title' => 'Đổi Mật Khẩu',
             'error' => $error,
             'success' => $success
+        ]);
+    }
+    /**
+     * Quản lý các danh mục hệ thống (Khu vực, Loại sạp, Ngành hàng, Loại giấy tờ)
+     */
+    public function categories() {
+        $categoryModel = new categoryModel();
+
+        // Chuẩn bị dữ liệu ban đầu cho các danh mục
+        $areas = $categoryModel->getItems('area');
+        $stallTypes = $categoryModel->getItems('stall_type');
+        $businessLines = $categoryModel->getItems('business_line');
+        $documentTypes = $categoryModel->getItems('document_type');
+
+        $this->view('backend/category/index', [
+            'title'         => 'Quản Lý Danh Mục',
+            'areas'         => $areas,
+            'stallTypes'    => $stallTypes,
+            'businessLines' => $businessLines,
+            'documentTypes' => $documentTypes
         ]);
     }
 

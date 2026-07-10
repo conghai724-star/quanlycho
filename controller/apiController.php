@@ -259,17 +259,18 @@ class apiController {
         $this->abort405('POST', 'create', 'stall');
 
         $data = [
-            'area_id'    => $_POST['area_id'] ?? '',
-            'stall_code' => $_POST['stall_code'] ?? '',
-            'stall_type' => $_POST['stall_type'] ?? 'Quầy hàng',
-            'area_size'  => $_POST['area_size'] ?? '',
-            'base_price' => $_POST['base_price'] ?? '',
-            'status_id'  => $_POST['status'] ?? 3
+            'area_id'       => $_POST['area_id'] ?? '',
+            'stall_code'    => $_POST['stall_code'] ?? '',
+            'stall_type_id' => $_POST['stall_type_id'] ?? '',
+            'area_size'     => $_POST['area_size'] ?? '',
+            'base_price'    => $_POST['base_price'] ?? '',
+            'status_id'     => $_POST['status'] ?? 3
         ];
 
         $validator = new validator();
         $validator->required('area_id', $data['area_id'], 'Khu vực không được để trống.')
                   ->required('stall_code', $data['stall_code'], 'Mã sạp không được để trống.')
+                  ->required('stall_type_id', $data['stall_type_id'], 'Vui lòng chọn loại sạp.')
                   ->required('area_size', $data['area_size'], 'Diện tích không được để trống.')
                   ->numeric('area_size', $data['area_size'], 'Diện tích phải là dạng số.')
                   ->min('area_size', $data['area_size'], 0.01, 'Diện tích phải lớn hơn 0.')
@@ -300,17 +301,18 @@ class apiController {
         $id = $_POST['id'];
 
         $data = [
-            'area_id'    => $_POST['area_id'] ?? '',
-            'stall_code' => $_POST['stall_code'] ?? '',
-            'stall_type' => $_POST['stall_type'] ?? 'Quầy hàng',
-            'area_size'  => $_POST['area_size'] ?? '',
-            'base_price' => $_POST['base_price'] ?? '',
-            'status_id'  => $_POST['status'] ?? 3
+            'area_id'       => $_POST['area_id'] ?? '',
+            'stall_code'    => $_POST['stall_code'] ?? '',
+            'stall_type_id' => $_POST['stall_type_id'] ?? '',
+            'area_size'     => $_POST['area_size'] ?? '',
+            'base_price'    => $_POST['base_price'] ?? '',
+            'status_id'     => $_POST['status'] ?? 3
         ];
 
         $validator = new validator();
         $validator->required('area_id', $data['area_id'], 'Khu vực không được để trống.')
                   ->required('stall_code', $data['stall_code'], 'Mã sạp không được để trống.')
+                  ->required('stall_type_id', $data['stall_type_id'], 'Vui lòng chọn loại sạp.')
                   ->required('area_size', $data['area_size'], 'Diện tích không được để trống.')
                   ->numeric('area_size', $data['area_size'], 'Diện tích phải là dạng số.')
                   ->min('area_size', $data['area_size'], 0.01, 'Diện tích phải lớn hơn 0.')
@@ -824,7 +826,7 @@ class apiController {
 
         $data = [
             'trader_id'   => $_POST['trader_id'] ?? '',
-            'doc_type'    => $_POST['doc_type'] ?? '',
+            'doc_type_id' => $_POST['doc_type_id'] ?? '',
             'doc_number'  => $_POST['doc_number'] ?? '',
             'name'        => $_POST['name'] ?? '',
             'description' => $_POST['description'] ?? '',
@@ -836,7 +838,7 @@ class apiController {
         // Validation các trường bắt buộc
         $validator = new validator();
         $validator->required('trader_id', $data['trader_id'], 'Bạn phải chọn tiểu thương.')
-                  ->required('doc_type', $data['doc_type'], 'Bạn phải chọn loại giấy tờ.')
+                  ->required('doc_type_id', $data['doc_type_id'], 'Bạn phải chọn loại giấy tờ.')
                   ->required('doc_number', $data['doc_number'], 'Bạn phải nhập số giấy tờ/chứng nhận.')
                   ->required('name', $data['name'], 'Bạn phải nhập tên giấy tờ.')
                   ->required('issue_date', $data['issue_date'], 'Bạn phải nhập ngày hiệu lực bắt đầu.')
@@ -846,9 +848,8 @@ class apiController {
         $this->abort400(strtotime($data['issue_date']) <= strtotime($data['expiry_date']), 'create', 'certificate', 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.');
 
         try {
-            $db = database::getInstance();
-            $checkNum = $db->selectOne("SELECT COUNT(*) as count FROM trader_attp WHERE doc_number = :num AND status_id != (SELECT id FROM system_statuses WHERE domain = 'attp' AND code = '99')", ['num' => $data['doc_number']]);
-            $this->abort400(($checkNum['count'] ?? 0) == 0, 'create', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
+            $foodsafetyModel = new foodsafetyModel();
+            $this->abort400(!$foodsafetyModel->isDocNumberExists($data['doc_number']), 'create', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file đính kèm (nếu có)
             if (isset($_FILES['certificate_file']) && $_FILES['certificate_file']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -858,7 +859,6 @@ class apiController {
                 $data['file'] = $savedFile;
             }
 
-            $foodsafetyModel = new foodsafetyModel();
             $foodsafetyModel->createCertificate($data);
             $this->apiResponse('create', 'certificate', true);
         } catch (Exception $e) {
@@ -877,7 +877,7 @@ class apiController {
 
         $data = [
             'trader_id'   => $_POST['trader_id'] ?? '',
-            'doc_type'    => $_POST['doc_type'] ?? '',
+            'doc_type_id' => $_POST['doc_type_id'] ?? '',
             'doc_number'  => $_POST['doc_number'] ?? '',
             'name'        => $_POST['name'] ?? '',
             'description' => $_POST['description'] ?? '',
@@ -889,7 +889,7 @@ class apiController {
         // Validation các trường bắt buộc
         $validator = new validator();
         $validator->required('trader_id', $data['trader_id'], 'Bạn phải chọn tiểu thương.')
-                  ->required('doc_type', $data['doc_type'], 'Bạn phải chọn loại giấy tờ.')
+                  ->required('doc_type_id', $data['doc_type_id'], 'Bạn phải chọn loại giấy tờ.')
                   ->required('doc_number', $data['doc_number'], 'Bạn phải nhập số giấy tờ/chứng nhận.')
                   ->required('name', $data['name'], 'Bạn phải nhập tên giấy tờ.')
                   ->required('issue_date', $data['issue_date'], 'Bạn phải nhập ngày hiệu lực bắt đầu.')
@@ -899,9 +899,8 @@ class apiController {
         $this->abort400(strtotime($data['issue_date']) <= strtotime($data['expiry_date']), 'update', 'certificate', 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.');
 
         try {
-            $db = database::getInstance();
-            $checkNum = $db->selectOne("SELECT COUNT(*) as count FROM trader_attp WHERE doc_number = :num AND id != :id AND status_id != (SELECT id FROM system_statuses WHERE domain = 'attp' AND code = '99')", ['num' => $data['doc_number'], 'id' => $id]);
-            $this->abort400(($checkNum['count'] ?? 0) == 0, 'update', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
+            $foodsafetyModel = new foodsafetyModel();
+            $this->abort400(!$foodsafetyModel->isDocNumberExists($data['doc_number'], $id), 'update', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file đính kèm (nếu có)
             if (isset($_FILES['certificate_file']) && $_FILES['certificate_file']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -920,7 +919,6 @@ class apiController {
                 $data['status_id'] = $statusModel->getIdByCode('attp', 'valid');
             }
 
-            $foodsafetyModel = new foodsafetyModel();
             $foodsafetyModel->updateCertificate($id, $data);
             $this->apiResponse('update', 'certificate', true);
         } catch (Exception $e) {
@@ -1000,6 +998,217 @@ class apiController {
 
     //--------------KẾT THÚC SƠ ĐỒ CHỢ TƯƠNG TÁC--------------//
 
+    //--------------BẮT ĐẦU QUẢN LÝ DANH MỤC--------------//
 
+    /**
+     * API lấy chi tiết một danh mục (AJAX GET)
+     */
+    public function getCategoryDetail() {
+        $this->abort405('GET', 'view', 'category');
+        
+        $id = $_GET['id'] ?? '';
+        $type = $_GET['type'] ?? '';
+        
+        $this->abort400($id && $type, 'view', 'category', 'Thiếu ID hoặc Loại danh mục.');
+
+        try {
+            $categoryModel = new categoryModel();
+            $item = $categoryModel->getItemById($type, $id);
+            $this->abort404($item, 'getItemById', $id, 'view', 'category', 'Không tìm thấy danh mục yêu cầu.');
+
+            $this->response([
+                'status' => 200,
+                'data' => $item
+            ]);
+        } catch (Exception $e) {
+            $this->abort500($e, 'view', 'category');
+        }
+    }
+
+    /**
+     * API thêm danh mục mới (AJAX POST)
+     */
+    public function addCategory() {
+        $this->abort405('POST', 'create', 'category');
+        $this->abort400('type', 'create', 'category', 'Thiếu loại danh mục.');
+
+        $type = $_POST['type'];
+        $categoryModel = new categoryModel();
+
+        try {
+            $data = [];
+            $validator = new validator();
+
+            if ($type === 'area') {
+                $data = [
+                    'area_name'   => $_POST['area_name'] ?? '',
+                    'block'       => $_POST['block'] ?? '',
+                    'lot'         => $_POST['lot'] ?? '',
+                    'description' => $_POST['description'] ?? ''
+                ];
+                $validator->required('area_name', $data['area_name'], 'Tên khu vực không được để trống.');
+                $this->abort400($validator, 'create', 'category');
+                
+                // Kiểm tra trùng tên
+                $this->abort400(!$categoryModel->isCodeExists('area', 'area_name', $data['area_name']), 'create', 'category', 'Tên khu vực này đã tồn tại.');
+
+            } elseif ($type === 'stall_type') {
+                $data = [
+                    'type_code'   => $_POST['type_code'] ?? '',
+                    'type_name'   => $_POST['type_name'] ?? '',
+                    'description' => $_POST['description'] ?? ''
+                ];
+                $validator->required('type_code', $data['type_code'], 'Mã loại sạp không được để trống.')
+                          ->required('type_name', $data['type_name'], 'Tên loại sạp không được để trống.');
+                $this->abort400($validator, 'create', 'category');
+
+                $this->abort400(!$categoryModel->isCodeExists('stall_type', 'type_code', $data['type_code']), 'create', 'category', 'Mã loại sạp này đã tồn tại.');
+
+            } elseif ($type === 'business_line') {
+                $data = [
+                    'line_code'   => $_POST['line_code'] ?? '',
+                    'line_name'   => $_POST['line_name'] ?? '',
+                    'description' => $_POST['description'] ?? ''
+                ];
+                $validator->required('line_code', $data['line_code'], 'Mã ngành hàng không được để trống.')
+                          ->required('line_name', $data['line_name'], 'Tên ngành hàng không được để trống.');
+                $this->abort400($validator, 'create', 'category');
+
+                $this->abort400(!$categoryModel->isCodeExists('business_line', 'line_code', $data['line_code']), 'create', 'category', 'Mã ngành hàng này đã tồn tại.');
+
+            } elseif ($type === 'document_type') {
+                $data = [
+                    'type_code'   => $_POST['type_code'] ?? '',
+                    'type_name'   => $_POST['type_name'] ?? '',
+                    'description' => $_POST['description'] ?? ''
+                ];
+                $validator->required('type_code', $data['type_code'], 'Mã loại giấy tờ không được để trống.')
+                          ->required('type_name', $data['type_name'], 'Tên loại giấy tờ không được để trống.');
+                $this->abort400($validator, 'create', 'category');
+
+                $this->abort400(!$categoryModel->isCodeExists('document_type', 'type_code', $data['type_code']), 'create', 'category', 'Mã loại giấy tờ này đã tồn tại.');
+            } else {
+                $this->abort400(false, 'create', 'category', 'Loại danh mục không hợp lệ.');
+            }
+
+            $itemId = $categoryModel->createItem($type, $data);
+            $this->response([
+                'status' => 200,
+                'message' => 'Thêm mới danh mục thành công!',
+                'id' => $itemId
+            ]);
+        } catch (Exception $e) {
+            $this->abort500($e, 'create', 'category');
+        }
+    }
+
+    /**
+     * API cập nhật danh mục (AJAX POST)
+     */
+    public function editCategory() {
+        $this->abort405('POST', 'update', 'category');
+        $this->abort400(['id', 'type'], 'update', 'category', 'Thiếu thông tin danh mục.');
+
+        $id = $_POST['id'];
+        $type = $_POST['type'];
+        $categoryModel = new categoryModel();
+
+        // Kiểm tra tồn tại
+        $item = $categoryModel->getItemById($type, $id);
+        $this->abort404($item, 'getItemById', $id, 'update', 'category', 'Danh mục không tồn tại.');
+
+        try {
+            $data = [];
+            $validator = new validator();
+
+            if ($type === 'area') {
+                $data = [
+                    'area_name'   => $_POST['area_name'] ?? '',
+                    'block'       => $_POST['block'] ?? '',
+                    'lot'         => $_POST['lot'] ?? '',
+                    'description' => $_POST['description'] ?? ''
+                ];
+                $validator->required('area_name', $data['area_name'], 'Tên khu vực không được để trống.');
+                $this->abort400($validator, 'update', 'category');
+                
+                $this->abort400(!$categoryModel->isCodeExists('area', 'area_name', $data['area_name'], $id), 'update', 'category', 'Tên khu vực này đã tồn tại.');
+
+            } elseif ($type === 'stall_type') {
+                $data = [
+                    'type_code'   => $_POST['type_code'] ?? '',
+                    'type_name'   => $_POST['type_name'] ?? '',
+                    'description' => $_POST['description'] ?? ''
+                ];
+                $validator->required('type_code', $data['type_code'], 'Mã loại sạp không được để trống.')
+                          ->required('type_name', $data['type_name'], 'Tên loại sạp không được để trống.');
+                $this->abort400($validator, 'update', 'category');
+
+                $this->abort400(!$categoryModel->isCodeExists('stall_type', 'type_code', $data['type_code'], $id), 'update', 'category', 'Mã loại sạp này đã tồn tại.');
+
+            } elseif ($type === 'business_line') {
+                $data = [
+                    'line_code'   => $_POST['line_code'] ?? '',
+                    'line_name'   => $_POST['line_name'] ?? '',
+                    'description' => $_POST['description'] ?? ''
+                ];
+                $validator->required('line_code', $data['line_code'], 'Mã ngành hàng không được để trống.')
+                          ->required('line_name', $data['line_name'], 'Tên ngành hàng không được để trống.');
+                $this->abort400($validator, 'update', 'category');
+
+                $this->abort400(!$categoryModel->isCodeExists('business_line', 'line_code', $data['line_code'], $id), 'update', 'category', 'Mã ngành hàng này đã tồn tại.');
+
+            } elseif ($type === 'document_type') {
+                $data = [
+                    'type_code'   => $_POST['type_code'] ?? '',
+                    'type_name'   => $_POST['type_name'] ?? '',
+                    'description' => $_POST['description'] ?? ''
+                ];
+                $validator->required('type_code', $data['type_code'], 'Mã loại giấy tờ không được để trống.')
+                          ->required('type_name', $data['type_name'], 'Tên loại giấy tờ không được để trống.');
+                $this->abort400($validator, 'update', 'category');
+
+                $this->abort400(!$categoryModel->isCodeExists('document_type', 'type_code', $data['type_code'], $id), 'update', 'category', 'Mã loại giấy tờ này đã tồn tại.');
+            } else {
+                $this->abort400(false, 'update', 'category', 'Loại danh mục không hợp lệ.');
+            }
+
+            $categoryModel->updateItem($type, $id, $data);
+            $this->response([
+                'status' => 200,
+                'message' => 'Cập nhật danh mục thành công!'
+            ]);
+        } catch (Exception $e) {
+            $this->abort500($e, 'update', 'category');
+        }
+    }
+
+    /**
+     * API xóa danh mục (AJAX POST)
+     */
+    public function deleteCategory() {
+        $this->abort405('POST', 'delete', 'category');
+        $this->abort400(['id', 'type'], 'delete', 'category', 'Thiếu thông tin danh mục cần xóa.');
+
+        $id = $_POST['id'];
+        $type = $_POST['type'];
+        $categoryModel = new categoryModel();
+
+        // Kiểm tra tồn tại
+        $item = $categoryModel->getItemById($type, $id);
+        $this->abort404($item, 'getItemById', $id, 'delete', 'category', 'Danh mục không tồn tại.');
+
+        try {
+            $categoryModel->deleteItem($type, $id);
+            $this->response([
+                'status' => 200,
+                'message' => 'Xóa danh mục thành công!'
+            ]);
+        } catch (Exception $e) {
+            $this->response([
+                'status' => 400,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
 
 }

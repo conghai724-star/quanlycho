@@ -42,11 +42,11 @@
     const HANDLE_MIN_SIZE = 24;
 
     function isRoadType(type) {
-        return type === 'street' || type === 'street-corner';
+        return type === 'street' || type === 'fence';
     }
 
     function isRoadLikeType(type) {
-        return isRoadType(type) || type === 'fence';
+        return isRoadType(type);
     }
 
     function isIconOnlyType(type) {
@@ -57,10 +57,8 @@
         switch (type) {
             case 'street':
                 return { width: 240, height: 24, color: '#8d95a0' };
-            case 'street-corner':
-                return { width: 120, height: 120, color: '#eceff1' };
             case 'fence':
-                return { width: 40, height: 40, color: '#ddc9b0' };
+                return { width: 240, height: 16, color: '#ddc9b0' };
             case 'security-room':
                 return { width: 40, height: 40, color: '#dbeafe' };
             case 'gate':
@@ -79,11 +77,9 @@
     function getElementTypeClass(type) {
         switch (type) {
             case 'street':
-                return 'map-element-street-straight';
-            case 'street-corner':
-                return 'map-element-street-corner';
+                return 'map-element-street-svg';
             case 'fence':
-                return 'map-element-fence';
+                return 'map-element-fence-svg';
             case 'security-room':
                 return 'map-element-security-room';
             default:
@@ -109,6 +105,36 @@
     }
 
     function syncElementContent(div, item) {
+        if (isRoadType(item.element_type)) {
+            const isFence = item.element_type === 'fence';
+            const strokeWidth = item.stroke_width || (isFence ? 16 : 24);
+            const bbox = getStreetBoundingBox(item.waypoints, strokeWidth);
+            const pad = strokeWidth / 2;
+            
+            const pointsStr = item.waypoints.map(pt => `${pt.x - bbox.minX + pad},${pt.y - bbox.minY + pad}`).join(' ');
+            
+            if (isFence) {
+                div.innerHTML = `
+                    <svg width="100%" height="100%" class="fence-svg-container" style="overflow: visible;">
+                        <polyline class="fence-bg" points="${pointsStr}" stroke="${item.color || '#64748b'}" stroke-width="${strokeWidth}" fill="none" />
+                        <polyline class="fence-line" points="${pointsStr}" stroke="#cbd5e1" stroke-width="${Math.max(2, strokeWidth - 4)}" stroke-dasharray="10 8" fill="none" />
+                        <polyline class="fence-core" points="${pointsStr}" stroke="#ffffff" stroke-width="2" fill="none" />
+                    </svg>
+                `;
+            } else {
+                div.innerHTML = `
+                    <svg width="100%" height="100%" class="street-svg-container" style="overflow: visible;">
+                        <polyline class="street-bg" points="${pointsStr}" stroke="${item.color || '#8d95a0'}" stroke-width="${strokeWidth}" fill="none" />
+                        <polyline class="street-line" points="${pointsStr}" stroke-width="2" fill="none" />
+                    </svg>
+                `;
+            }
+            
+
+            div.dataset.contentHtml = isFence ? 'fence-svg' : 'street-svg';
+            return;
+        }
+
         const labelHtml = buildElementLabel(item);
         const currentHtml = div.dataset.contentHtml || '';
         if (currentHtml === labelHtml) {
@@ -140,6 +166,49 @@
         App.utils.ajaxRequest('GET', 'api/getMapElements', null, function (response) {
             if (response.status === 200) {
                 elements = response.data || [];
+                
+                // Chuẩn hóa dữ liệu đường đi (SVG / waypoints / backward compat)
+                elements.forEach(item => {
+                    if (item.waypoints && typeof item.waypoints === 'string') {
+                        try {
+                            item.waypoints = JSON.parse(item.waypoints);
+                        } catch (e) {
+                            item.waypoints = [];
+                        }
+                    }
+
+                    if (item.element_type === 'street-corner') {
+                        item.element_type = 'street';
+                        item.element_name = 'Đường đi';
+                        item.stroke_width = 24;
+                        item.waypoints = [
+                            { x: parseInt(item.pos_x), y: parseInt(item.pos_y) + (parseInt(item.height) || 120)/2 },
+                            { x: parseInt(item.pos_x) + (parseInt(item.width) || 120)/2, y: parseInt(item.pos_y) + (parseInt(item.height) || 120)/2 },
+                            { x: parseInt(item.pos_x) + (parseInt(item.width) || 120)/2, y: parseInt(item.pos_y) }
+                        ];
+                    } else if (isRoadType(item.element_type) && (!item.waypoints || item.waypoints.length === 0)) {
+                        // Chuyển đổi rect sang 2 waypoints
+                        const w = parseInt(item.width) || 120;
+                        const h = parseInt(item.height) || (item.element_type === 'fence' ? 16 : 24);
+                        const x = parseInt(item.pos_x) || 100;
+                        const y = parseInt(item.pos_y) || 100;
+                        
+                        if (w >= h) {
+                            item.waypoints = [
+                                { x: x, y: y + h/2 },
+                                { x: x + w, y: y + h/2 }
+                            ];
+                            item.stroke_width = h;
+                        } else {
+                            item.waypoints = [
+                                { x: x + w/2, y: y },
+                                { x: x + w/2, y: y + h }
+                            ];
+                            item.stroke_width = w;
+                        }
+                    }
+                });
+
                 renderAllElements();
             } else {
                 App.utils.showToast('Không thể tải sơ đồ chợ: ' + response.message, 'danger');
@@ -178,33 +247,35 @@
         syncElementContent(div, item);
         updateElementDOM(div, item);
 
-        // Tay nắm thay đổi kích thước theo 4 phía + xoay trực tiếp
-        ['n', 'e', 's', 'w'].forEach(position => {
-            const resizeHandle = document.createElement('div');
-            resizeHandle.className = `resize-handle handle-${position}`;
-            resizeHandle.dataset.resize = position;
-            div.appendChild(resizeHandle);
-            resizeHandle.addEventListener('mousedown', function (e) {
+        if (!isRoadType(item.element_type)) {
+            // Tay nắm thay đổi kích thước theo 4 phía + xoay trực tiếp
+            ['n', 'e', 's', 'w'].forEach(position => {
+                const resizeHandle = document.createElement('div');
+                resizeHandle.className = `resize-handle handle-${position}`;
+                resizeHandle.dataset.resize = position;
+                div.appendChild(resizeHandle);
+                resizeHandle.addEventListener('mousedown', function (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    startResizingElement(e, item, div, position);
+                });
+            });
+
+            const rotateHandle = document.createElement('div');
+            rotateHandle.className = 'rotate-handle';
+            rotateHandle.dataset.rotate = 'true';
+            div.appendChild(rotateHandle);
+            rotateHandle.addEventListener('mousedown', function (e) {
                 e.stopPropagation();
                 e.preventDefault();
-                startResizingElement(e, item, div, position);
+                startRotatingElement(e, item, div);
             });
-        });
-
-        const rotateHandle = document.createElement('div');
-        rotateHandle.className = 'rotate-handle';
-        rotateHandle.dataset.rotate = 'true';
-        div.appendChild(rotateHandle);
-        rotateHandle.addEventListener('mousedown', function (e) {
-            e.stopPropagation();
-            e.preventDefault();
-            startRotatingElement(e, item, div);
-        });
+        }
 
         // Sự kiện click để chọn phần tử
         div.addEventListener('mousedown', function (e) {
-            // Nếu click trúng tay nắm trực tiếp thì bỏ qua để handler riêng xử lý
-            if (e.target.closest('.resize-handle') || e.target.closest('.rotate-handle')) {
+            // Nếu click trúng tay nắm trực tiếp, waypoint handle hoặc midpoint handle thì bỏ qua để handler riêng xử lý
+            if (e.target.closest('.resize-handle') || e.target.closest('.rotate-handle') || e.target.closest('.waypoint-handle') || e.target.closest('.midpoint-handle')) {
                 return;
             }
             e.stopPropagation();
@@ -217,6 +288,60 @@
 
     // Cập nhật CSS hiển thị cho phần tử trong DOM
     function updateElementDOM(div, item) {
+        if (isRoadType(item.element_type)) {
+            const isFence = item.element_type === 'fence';
+            const strokeWidth = item.stroke_width || (isFence ? 16 : 24);
+            const bbox = getStreetBoundingBox(item.waypoints, strokeWidth);
+            
+            div.style.left = `${bbox.x}px`;
+            div.style.top = `${bbox.y}px`;
+            div.style.width = `${bbox.w}px`;
+            div.style.height = `${bbox.h}px`;
+            div.style.transform = '';
+            div.style.transformOrigin = '';
+            div.style.fontSize = '';
+            
+            const pad = strokeWidth / 2;
+            const pointsStr = item.waypoints.map(pt => `${pt.x - bbox.minX + pad},${pt.y - bbox.minY + pad}`).join(' ');
+            
+            if (isFence) {
+                const fenceBg = div.querySelector('.fence-bg');
+                const fenceLine = div.querySelector('.fence-line');
+                const fenceCore = div.querySelector('.fence-core');
+                if (fenceBg) {
+                    fenceBg.setAttribute('points', pointsStr);
+                    fenceBg.setAttribute('stroke-width', strokeWidth);
+                    fenceBg.setAttribute('stroke', item.color || '#64748b');
+                }
+                if (fenceLine) {
+                    fenceLine.setAttribute('points', pointsStr);
+                    fenceLine.setAttribute('stroke-width', Math.max(2, strokeWidth - 4));
+                }
+                if (fenceCore) {
+                    fenceCore.setAttribute('points', pointsStr);
+                }
+            } else {
+                const streetBg = div.querySelector('.street-bg');
+                const streetLine = div.querySelector('.street-line');
+                if (streetBg) {
+                    streetBg.setAttribute('points', pointsStr);
+                    streetBg.setAttribute('stroke-width', strokeWidth);
+                    streetBg.setAttribute('stroke', item.color || '#8d95a0');
+                }
+                if (streetLine) {
+                    streetLine.setAttribute('points', pointsStr);
+                }
+            }
+            
+            // Sync bounding box coordinates to model
+            item.pos_x = bbox.x;
+            item.pos_y = bbox.y;
+            item.width = bbox.w;
+            item.height = bbox.h;
+            item.rotation = 0;
+            return;
+        }
+
         div.style.left = `${item.pos_x}px`;
         div.style.top = `${item.pos_y}px`;
         div.style.width = `${item.width}px`;
@@ -290,11 +415,23 @@
         // Điền dữ liệu vào form thuộc tính
         propTypeName.value = getTypeNameVietnamese(item.element_type);
         propName.value = item.element_name || '';
-        propX.value = item.pos_x;
-        propY.value = item.pos_y;
-        propW.value = item.width;
-        propH.value = item.height;
+        propX.value = Math.round(item.pos_x);
+        propY.value = Math.round(item.pos_y);
+        propW.value = Math.round(item.width);
+        propH.value = Math.round(item.height);
         propRotation.value = item.rotation || 0;
+
+        // Toggle panel inputs based on element type
+        if (isRoadType(item.element_type)) {
+            document.getElementById('group-size-dimensions').style.display = 'none';
+            document.getElementById('group-rotation-container').style.display = 'none';
+            document.getElementById('group-stroke-width').style.display = 'block';
+            document.getElementById('prop-stroke-width').value = item.stroke_width || (item.element_type === 'fence' ? 16 : 24);
+        } else {
+            document.getElementById('group-size-dimensions').style.display = 'grid';
+            document.getElementById('group-rotation-container').style.display = 'block';
+            document.getElementById('group-stroke-width').style.display = 'none';
+        }
 
         // Trạng thái hiển thị dropdown chọn sạp
         if (item.element_type === 'stall') {
@@ -309,6 +446,9 @@
             propColorHex.value = item.color || '#eceff1';
             updateStallInfoCard(null);
         }
+
+        // Vẽ các waypoint handles của đường đi
+        renderWaypointHandles(item);
     }
 
     // Bỏ chọn phần tử
@@ -318,6 +458,7 @@
         noSelectionMsg.style.display = 'block';
         selectionForm.style.display = 'none';
         updateStallInfoCard(null);
+        renderWaypointHandles(null); // Xóa handles
     }
 
     // Cập nhật thẻ thông tin sạp dưới nút xóa
@@ -466,8 +607,22 @@
                 newElement.element_type = type;
                 newElement.element_name = getTypeNameVietnamese(type);
                 const preset = getDefaultPreset(type);
-                newElement.width = preset.width;
-                newElement.height = preset.height;
+                
+                if (isRoadType(type)) {
+                    newElement.stroke_width = (type === 'fence') ? 16 : 24;
+                    newElement.waypoints = [
+                        { x: x, y: y },
+                        { x: x + 120, y: y }
+                    ];
+                    const bbox = getStreetBoundingBox(newElement.waypoints, newElement.stroke_width);
+                    newElement.pos_x = bbox.x;
+                    newElement.pos_y = bbox.y;
+                    newElement.width = bbox.w;
+                    newElement.height = bbox.h;
+                } else {
+                    newElement.width = preset.width;
+                    newElement.height = preset.height;
+                }
                 newElement.color = preset.color;
             } else if (action === 'create-stall') {
                 const stallId = e.dataTransfer.getData('stall-id');
@@ -519,6 +674,7 @@
         const startClientY = e.clientY;
         const initialX = item.pos_x;
         const initialY = item.pos_y;
+        const initialWaypoints = isRoadType(item.element_type) ? JSON.parse(JSON.stringify(item.waypoints)) : null;
         let hasRecorded = false;
 
         function onMouseMove(moveEvent) {
@@ -539,18 +695,31 @@
                 newY = Math.round(newY / 20) * 20;
             }
 
-            // Cập nhật tọa độ vào dữ liệu gốc
-            item.pos_x = newX;
-            item.pos_y = newY;
+            const actualDx = newX - initialX;
+            const actualDy = newY - initialY;
 
-            // Cập nhật giao diện
-            div.style.left = `${newX}px`;
-            div.style.top = `${newY}px`;
+            if (isRoadType(item.element_type) && initialWaypoints) {
+                // Di chuyển toàn bộ các điểm của đường đi theo khoảng cách thực tế
+                item.waypoints.forEach((pt, idx) => {
+                    pt.x = initialWaypoints[idx].x + actualDx;
+                    pt.y = initialWaypoints[idx].y + actualDy;
+                });
+                updateElementDOM(div, item);
+                renderWaypointHandles(item);
+            } else {
+                // Cập nhật tọa độ vào dữ liệu gốc
+                item.pos_x = newX;
+                item.pos_y = newY;
+
+                // Cập nhật giao diện
+                div.style.left = `${newX}px`;
+                div.style.top = `${newY}px`;
+            }
 
             // Cập nhật ô nhập tọa độ nếu đang hiển thị thuộc tính của nó
             if (selectedElement === item) {
-                propX.value = newX;
-                propY.value = newY;
+                propX.value = Math.round(item.pos_x);
+                propY.value = Math.round(item.pos_y);
             }
         }
 
@@ -562,6 +731,8 @@
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     }
+
+
 
     // 8. Co giãn kích thước trực tiếp bằng 4 phía (Resize Element)
     function startResizingElement(e, item, div, handlePosition) {
@@ -689,11 +860,24 @@
     // 9. Lắng nghe và thay đổi thuộc tính ở cột bên phải
     function setupPropertiesForm() {
         // Record state when inputs are focused (so we capture state before edit)
-        [propName, propX, propY, propW, propH, propRotation, propColor, propColorHex].forEach(input => {
-            input.addEventListener('focus', function () {
-                recordState();
-            });
+        const propStrokeWidth = document.getElementById('prop-stroke-width');
+        [propName, propX, propY, propW, propH, propRotation, propColor, propColorHex, propStrokeWidth].forEach(input => {
+            if (input) {
+                input.addEventListener('focus', function () {
+                    recordState();
+                });
+            }
         });
+
+        if (propStrokeWidth) {
+            propStrokeWidth.addEventListener('change', function () {
+                if (selectedElement && isRoadType(selectedElement.element_type)) {
+                    selectedElement.stroke_width = parseInt(propStrokeWidth.value) || (selectedElement.element_type === 'fence' ? 16 : 24);
+                    const div = document.getElementById(`el-${selectedElement.id || selectedElement.temp_id}`);
+                    if (div) updateElementDOM(div, selectedElement);
+                }
+            });
+        }
 
         // Tên hiển thị thay đổi
         propName.addEventListener('input', function () {
@@ -899,7 +1083,9 @@
                         width: Math.round(item.width),
                         height: Math.round(item.height),
                         rotation: item.rotation,
-                        color: item.color
+                        color: item.color,
+                        waypoints: item.waypoints ? JSON.stringify(item.waypoints) : null,
+                        stroke_width: item.stroke_width || null
                     };
                 })
             };
@@ -1042,8 +1228,7 @@
     function getTypeNameVietnamese(type) {
         switch (type) {
             case 'stall': return 'Sạp Chợ';
-            case 'street': return 'Đường thẳng';
-            case 'street-corner': return 'Đường rẽ góc';
+            case 'street': return 'Đường đi';
             case 'gate': return 'Cổng Chợ';
             case 'door': return 'Cửa Ra Vào';
             case 'utility': return 'Nhà Vệ Sinh / Tiện ích';
@@ -1198,6 +1383,495 @@
                 redo();
             }
         });
+    }
+
+    // Tính toán bounding box của đường đi từ waypoints
+    function getStreetBoundingBox(waypoints, strokeWidth = 24) {
+        if (!waypoints || waypoints.length === 0) {
+            return { x: 0, y: 0, w: 40, h: 40, minX: 0, maxX: 0, minY: 0, maxY: 0 };
+        }
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        waypoints.forEach(pt => {
+            const px = parseFloat(pt.x);
+            const py = parseFloat(pt.y);
+            if (px < minX) minX = px;
+            if (px > maxX) maxX = px;
+            if (py < minY) minY = py;
+            if (py > maxY) maxY = py;
+        });
+        
+        const pad = strokeWidth / 2;
+        const x = minX - pad;
+        const y = minY - pad;
+        const w = (maxX - minX) + strokeWidth;
+        const h = (maxY - minY) + strokeWidth;
+        
+        return { x, y, w, h, minX, maxX, minY, maxY };
+    }
+
+    // Vẽ các nút nắm kéo dài (waypoint handles) lên canvas
+    function renderWaypointHandles(item) {
+        // Xóa các handle cũ (cả waypoint và midpoint)
+        canvasGrid.querySelectorAll('.waypoint-handle, .midpoint-handle').forEach(h => h.remove());
+        
+        if (!item || !isRoadType(item.element_type) || !item.waypoints) return;
+        
+        // 1. Vẽ các nút nắm kéo tự do (waypoint handles) ở các góc/đầu mút
+        item.waypoints.forEach((pt, idx) => {
+            const handle = document.createElement('div');
+            handle.className = 'waypoint-handle';
+            handle.style.left = `${pt.x}px`;
+            handle.style.top = `${pt.y}px`;
+            handle.dataset.index = idx;
+            
+            // Container cho mũi tên bẻ hướng
+            const arrows = document.createElement('div');
+            arrows.className = 'waypoint-arrows';
+            handle.appendChild(arrows);
+            
+            const isStart = (idx === 0);
+            const isEnd = (idx === item.waypoints.length - 1);
+            
+            if (isStart || isEnd) {
+                const neighbor = isStart ? item.waypoints[1] : item.waypoints[idx - 1];
+                if (neighbor) {
+                    const dx = pt.x - neighbor.x;
+                    const dy = pt.y - neighbor.y;
+                    
+                    let straightDir, leftDir, rightDir;
+                    let straightArrow, leftArrow, rightArrow;
+                    
+                    if (Math.abs(dx) >= Math.abs(dy)) {
+                        if (dx >= 0) { // Heading Right
+                            straightDir = 'right'; straightArrow = '→';
+                            leftDir = 'up'; leftArrow = '↑';
+                            rightDir = 'down'; rightArrow = '↓';
+                        } else { // Heading Left
+                            straightDir = 'left'; straightArrow = '←';
+                            leftDir = 'down'; leftArrow = '↓';
+                            rightDir = 'up'; rightArrow = '↑';
+                        }
+                    } else {
+                        if (dy >= 0) { // Heading Down
+                            straightDir = 'down'; straightArrow = '↓';
+                            leftDir = 'right'; leftArrow = '→';
+                            rightDir = 'left'; rightArrow = '←';
+                        } else { // Heading Up
+                            straightDir = 'up'; straightArrow = '↑';
+                            leftDir = 'left'; leftArrow = '←';
+                            rightDir = 'right'; rightArrow = '→';
+                        }
+                    }
+                    
+                    const dirs = [
+                        { dir: straightDir, arrow: straightArrow, label: 'Đi Thẳng' },
+                        { dir: leftDir, arrow: leftArrow, label: 'Rẽ Trái' },
+                        { dir: rightDir, arrow: rightArrow, label: 'Rẽ Phải' }
+                    ];
+                    
+                    dirs.forEach(d => {
+                        const arrowBtn = document.createElement('div');
+                        arrowBtn.className = `waypoint-arrow arrow-${d.dir}`;
+                        arrowBtn.innerHTML = d.arrow;
+                        arrowBtn.title = `Kéo dài ${d.label} (${d.arrow})`;
+                        
+                        arrowBtn.addEventListener('mousedown', function(e) {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            startExtendingWaypoint(e, item, idx, d.dir);
+                        });
+                        
+                        arrows.appendChild(arrowBtn);
+                    });
+                }
+            }
+            
+            // Double-click vào handle để xóa waypoint (chấm lớn)
+            handle.addEventListener('dblclick', function(e) {
+                e.stopPropagation();
+                if (item.waypoints.length > 2) {
+                    recordState();
+                    
+                    // Kiểm tra xem đây có phải là điểm đầu của nhánh rẽ (M -> C -> M) không
+                    if (idx > 0 && idx < item.waypoints.length - 1) {
+                        const prev = item.waypoints[idx - 1];
+                        const next = item.waypoints[idx + 1];
+                        if (prev.x === next.x && prev.y === next.y) {
+                            // Xóa cả điểm nhánh rẽ C và điểm quay lại M
+                            item.waypoints.splice(idx, 2);
+                        } else {
+                            item.waypoints.splice(idx, 1);
+                        }
+                    } else {
+                        item.waypoints.splice(idx, 1);
+                    }
+                    
+                    const div = document.getElementById(`el-${item.id || item.temp_id}`);
+                    if (div) updateElementDOM(div, item);
+                    renderWaypointHandles(item);
+                } else {
+                    App.utils.showToast('Đường đi phải có ít nhất 2 điểm!', 'warning');
+                }
+            });
+            
+            // Kéo thả handle để di chuyển waypoint tự do
+            handle.addEventListener('mousedown', function(e) {
+                // Nếu mousedown trúng mũi tên con thì không chạy logic kéo handle tự do
+                if (e.target.closest('.waypoint-arrow')) return;
+                
+                e.stopPropagation();
+                e.preventDefault();
+                
+                const startClientX = e.clientX;
+                const startClientY = e.clientY;
+                const initialX = pt.x;
+                const initialY = pt.y;
+                let hasRecorded = false;
+                let isDragging = false;
+                
+                function onMouseMove(moveEvent) {
+                    const dx = (moveEvent.clientX - startClientX) / zoomLevel;
+                    const dy = (moveEvent.clientY - startClientY) / zoomLevel;
+                    
+                    if (!isDragging && Math.hypot(dx, dy) > 3) {
+                        isDragging = true;
+                    }
+                    
+                    if (isDragging) {
+                        if (!hasRecorded) {
+                            recordState();
+                            hasRecorded = true;
+                        }
+                        
+                        let newX = initialX + dx;
+                        let newY = initialY + dy;
+                        
+                        if (chkSnapGrid.checked) {
+                            newX = Math.round(newX / 20) * 20;
+                            newY = Math.round(newY / 20) * 20;
+                        }
+                        
+                        pt.x = newX;
+                        pt.y = newY;
+                        
+                        handle.style.left = `${newX}px`;
+                        handle.style.top = `${newY}px`;
+                        
+                        const div = document.getElementById(`el-${item.id || item.temp_id}`);
+                        if (div) updateElementDOM(div, item);
+                    }
+                }
+                
+                function onMouseUp() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    if (isDragging) {
+                        renderWaypointHandles(item);
+                    }
+                }
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+            
+            canvasGrid.appendChild(handle);
+        });
+
+        // 2. Vẽ các nút tròn mờ ở chính giữa từng đoạn thẳng (midpoint handles)
+        for (let i = 0; i < item.waypoints.length - 1; i++) {
+            const p1 = item.waypoints[i];
+            const p2 = item.waypoints[i + 1];
+            
+            const midX = (p1.x + p2.x) / 2;
+            const midY = (p1.y + p2.y) / 2;
+            
+            const midHandle = document.createElement('div');
+            midHandle.className = 'midpoint-handle';
+            midHandle.style.left = `${midX}px`;
+            midHandle.style.top = `${midY}px`;
+            
+            // Container cho mũi tên bẻ hướng của midpoint
+            const arrows = document.createElement('div');
+            arrows.className = 'waypoint-arrows';
+            midHandle.appendChild(arrows);
+            
+            // Xác định phân đoạn ngang hay dọc để hiển thị 2 hướng vuông góc tương ứng
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const isHorizontalSegment = Math.abs(dx) >= Math.abs(dy);
+            
+            const dirs = isHorizontalSegment 
+                ? [ { dir: 'up', arrow: '↑', label: 'Lên' }, { dir: 'down', arrow: '↓', label: 'Xuống' } ]
+                : [ { dir: 'left', arrow: '←', label: 'Trái' }, { dir: 'right', arrow: '→', label: 'Phải' } ];
+                
+            dirs.forEach(d => {
+                const arrowBtn = document.createElement('div');
+                arrowBtn.className = `waypoint-arrow arrow-${d.dir}`;
+                arrowBtn.innerHTML = d.arrow;
+                arrowBtn.title = `Bẻ góc rẽ ${d.label} (${d.arrow})`;
+                
+                arrowBtn.addEventListener('mousedown', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    startExtendingMidpoint(e, item, i, d.dir);
+                });
+                
+                arrows.appendChild(arrowBtn);
+            });
+            
+            // Kéo tự do trên midpoint-handle vẫn hoạt động như cũ
+            midHandle.addEventListener('mousedown', function(e) {
+                if (e.target.closest('.waypoint-arrow')) return;
+                
+                e.stopPropagation();
+                e.preventDefault();
+                startDraggingMidpoint(e, item, i);
+            });
+            
+            canvasGrid.appendChild(midHandle);
+        }
+    }
+
+    // Kéo dài góc rẽ theo hướng ngang hoặc dọc thẳng hàng
+    function startExtendingWaypoint(e, item, idx, direction) {
+        const originalPt = item.waypoints[idx];
+        const newPt = { x: originalPt.x, y: originalPt.y };
+        
+        const rect = canvasGrid.getBoundingClientRect();
+        const startX = originalPt.x;
+        const startY = originalPt.y;
+        let hasInserted = false;
+        
+        const isHorizontal = (direction === 'horizontal' || direction === 'left' || direction === 'right');
+        
+        function onMouseMove(moveEvent) {
+            let dragX = (moveEvent.clientX - rect.left) / zoomLevel;
+            let dragY = (moveEvent.clientY - rect.top) / zoomLevel;
+            
+            if (chkSnapGrid.checked) {
+                dragX = Math.round(dragX / 20) * 20;
+                dragY = Math.round(dragY / 20) * 20;
+            }
+            
+            const dist = isHorizontal ? Math.abs(dragX - startX) : Math.abs(dragY - startY);
+            if (!hasInserted && dist > 5) {
+                recordState();
+                
+                // Chèn điểm mới
+                if (idx === 0) {
+                    item.waypoints.unshift(newPt);
+                } else if (idx === item.waypoints.length - 1) {
+                    item.waypoints.push(newPt);
+                } else {
+                    item.waypoints.splice(idx + 1, 0, newPt);
+                }
+                
+                hasInserted = true;
+            }
+            
+            if (hasInserted) {
+                if (isHorizontal) {
+                    newPt.x = dragX;
+                    newPt.y = originalPt.y;
+                } else {
+                    newPt.x = originalPt.x;
+                    newPt.y = dragY;
+                }
+                
+                const div = document.getElementById(`el-${item.id || item.temp_id}`);
+                if (div) updateElementDOM(div, item);
+            }
+        }
+        
+        // onMouseUp extends waypoint
+        function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            if (hasInserted) {
+                renderWaypointHandles(item);
+            }
+        }
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
+
+    // Kéo bẻ góc từ nút tròn mờ ở chính giữa đoạn thẳng
+    function startDraggingMidpoint(e, item, segmentIdx) {
+        const p1 = item.waypoints[segmentIdx];
+        const p2 = item.waypoints[segmentIdx + 1];
+        
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        
+        const newPt = { x: midX, y: midY };
+        const rect = canvasGrid.getBoundingClientRect();
+        
+        const startX = midX;
+        const startY = midY;
+        let hasInserted = false;
+        
+        function onMouseMove(moveEvent) {
+            let dragX = (moveEvent.clientX - rect.left) / zoomLevel;
+            let dragY = (moveEvent.clientY - rect.top) / zoomLevel;
+            
+            if (chkSnapGrid.checked) {
+                dragX = Math.round(dragX / 20) * 20;
+                dragY = Math.round(dragY / 20) * 20;
+            }
+            
+            const dist = Math.hypot(dragX - startX, dragY - startY);
+            if (!hasInserted && dist > 5) {
+                recordState();
+                
+                // Chèn điểm mới ở giữa đoạn segmentIdx và segmentIdx + 1
+                item.waypoints.splice(segmentIdx + 1, 0, newPt);
+                hasInserted = true;
+            }
+            
+            if (hasInserted) {
+                newPt.x = dragX;
+                newPt.y = dragY;
+                
+                const div = document.getElementById(`el-${item.id || item.temp_id}`);
+                if (div) updateElementDOM(div, item);
+            }
+        }
+        
+        function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            if (hasInserted) {
+                renderWaypointHandles(item);
+            }
+        }
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
+
+    // Kéo bẻ góc vuông góc cố định từ nút tròn mờ (Tạo nhánh rẽ trên chính con đường đó)
+    function startExtendingMidpoint(e, item, segmentIdx, direction) {
+        const p1 = item.waypoints[segmentIdx];
+        const p2 = item.waypoints[segmentIdx + 1];
+        
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        
+        // Chèn 3 điểm đại diện cho nhánh rẽ: M -> C -> M
+        const M = { x: midX, y: midY };
+        const C = { x: midX, y: midY };
+        const M_dup = { x: midX, y: midY };
+        
+        item.waypoints.splice(segmentIdx + 1, 0, M, C, M_dup);
+        
+        // Gọi hàm kéo nhánh rẽ mới chèn (điểm C ở index segmentIdx + 2)
+        startDraggingBranch(e, item, segmentIdx, segmentIdx + 2, direction);
+    }
+
+    // Kéo nhánh rẽ mới bẻ từ trung điểm dọc/ngang
+    function startDraggingBranch(e, item, segmentIdx, branchIdx, direction) {
+        const branchPt = item.waypoints[branchIdx];
+        const rect = canvasGrid.getBoundingClientRect();
+        const startX = branchPt.x;
+        const startY = branchPt.y;
+        
+        const isHorizontal = (direction === 'horizontal' || direction === 'left' || direction === 'right');
+        let hasRecorded = false;
+        
+        function onMouseMove(moveEvent) {
+            let dragX = (moveEvent.clientX - rect.left) / zoomLevel;
+            let dragY = (moveEvent.clientY - rect.top) / zoomLevel;
+            
+            if (chkSnapGrid.checked) {
+                dragX = Math.round(dragX / 20) * 20;
+                dragY = Math.round(dragY / 20) * 20;
+            }
+            
+            const dist = isHorizontal ? Math.abs(dragX - startX) : Math.abs(dragY - startY);
+            if (dist > 5) {
+                if (!hasRecorded) {
+                    recordState();
+                    hasRecorded = true;
+                }
+                
+                if (isHorizontal) {
+                    branchPt.x = dragX;
+                    branchPt.y = startY;
+                } else {
+                    branchPt.x = startX;
+                    branchPt.y = dragY;
+                }
+                
+                const div = document.getElementById(`el-${item.id || item.temp_id}`);
+                if (div) updateElementDOM(div, item);
+            }
+        }
+        
+        function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            if (hasRecorded) {
+                renderWaypointHandles(item);
+            } else {
+                // Người dùng không kéo đủ xa, hoàn tác chèn 3 điểm nhánh rẽ
+                item.waypoints.splice(segmentIdx + 1, 3);
+                const div = document.getElementById(`el-${item.id || item.temp_id}`);
+                if (div) updateElementDOM(div, item);
+                renderWaypointHandles(item);
+            }
+        }
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
+
+    // Tìm phân đoạn đường gần điểm click nhất
+    function findClosestSegment(pt, waypoints) {
+        let minDistance = Infinity;
+        let closestIndex = 0;
+        
+        for (let i = 0; i < waypoints.length - 1; i++) {
+            const dist = getDistanceToSegment(pt, waypoints[i], waypoints[i+1]);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestIndex = i;
+            }
+        }
+        return closestIndex;
+    }
+    
+    // Tính khoảng cách Euclid từ điểm P đến đoạn thẳng AB
+    function getDistanceToSegment(p, a, b) {
+        const x = p.x, y = p.y;
+        const x1 = a.x, y1 = a.y;
+        const x2 = b.x, y2 = b.y;
+        
+        const A = x - x1;
+        const B = y - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+        
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+        if (len_sq != 0) param = dot / len_sq;
+            
+        let xx, yy;
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+        
+        const dx = x - xx;
+        const dy = y - yy;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     // Chạy khởi động khi tài liệu sẵn sàng

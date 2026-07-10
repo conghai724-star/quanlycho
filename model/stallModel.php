@@ -32,8 +32,9 @@ class stallModel {
      * Lấy toàn bộ danh sách sạp kèm thông tin khu vực và bộ lọc tìm kiếm
      */
     public function getAll($areaId = null, $status = null, $search = null) {
-        $sql = "SELECT s.*, ss.code AS status, ss.status_name, sc.color_class, a.area_name, a.block, a.lot, t.fullname AS trader_name, bl.line_name AS business_line_name 
+        $sql = "SELECT s.*, st.type_name AS stall_type, ss.code AS status, ss.status_name, sc.color_class, a.area_name, a.block, a.lot, t.fullname AS trader_name, bl.line_name AS business_line_name 
                 FROM stalls s
+                LEFT JOIN stall_types st ON s.stall_type_id = st.id
                 LEFT JOIN system_statuses ss ON s.status_id = ss.id
                 LEFT JOIN status_colors sc ON ss.color_id = sc.id
                 LEFT JOIN areas a ON s.area_id = a.id
@@ -70,8 +71,9 @@ class stallModel {
     }
 
     public function getById($id) {
-        $sql = "SELECT s.*, ss.code AS status, ss.status_name, sc.color_class, a.area_name, a.block, a.lot, t.fullname AS trader_name, bl.line_name AS business_line_name 
+        $sql = "SELECT s.*, st.type_name AS stall_type, ss.code AS status, ss.status_name, sc.color_class, a.area_name, a.block, a.lot, t.fullname AS trader_name, bl.line_name AS business_line_name 
                 FROM stalls s 
+                LEFT JOIN stall_types st ON s.stall_type_id = st.id
                 LEFT JOIN system_statuses ss ON s.status_id = ss.id
                 LEFT JOIN status_colors sc ON ss.color_id = sc.id
                 LEFT JOIN areas a ON s.area_id = a.id 
@@ -86,16 +88,16 @@ class stallModel {
         $statusModel = new statusModel();
         $emptyStatusId = $statusModel->getIdByCode('stall', 'empty');
 
-        $sql = "INSERT INTO stalls (area_id, stall_code, stall_type, area_size, base_price, status_id) 
-                VALUES (:area_id, :stall_code, :stall_type, :area_size, :base_price, :status_id)";
+        $sql = "INSERT INTO stalls (area_id, stall_code, stall_type_id, area_size, base_price, status_id) 
+                VALUES (:area_id, :stall_code, :stall_type_id, :area_size, :base_price, :status_id)";
         
         $params = [
-            'area_id'    => $data['area_id'],
-            'stall_code' => $data['stall_code'],
-            'stall_type' => $data['stall_type'] ?? 'Quầy hàng',
-            'area_size'  => $data['area_size'],
-            'base_price' => $data['base_price'],
-            'status_id'  => $data['status_id'] ?: $emptyStatusId
+            'area_id'       => $data['area_id'],
+            'stall_code'    => $data['stall_code'],
+            'stall_type_id' => $data['stall_type_id'],
+            'area_size'     => $data['area_size'],
+            'base_price'    => $data['base_price'],
+            'status_id'     => $data['status_id'] ?: $emptyStatusId
         ];
 
         $this->db->query($sql, $params);
@@ -108,17 +110,17 @@ class stallModel {
 
         $sql = "UPDATE stalls 
                 SET area_id = :area_id, stall_code = :stall_code, 
-                    stall_type = :stall_type, area_size = :area_size, base_price = :base_price, status_id = :status_id 
+                    stall_type_id = :stall_type_id, area_size = :area_size, base_price = :base_price, status_id = :status_id 
                 WHERE id = :id";
         
         $params = [
-            'id'         => $id,
-            'area_id'    => $data['area_id'],
-            'stall_code' => $data['stall_code'],
-            'stall_type' => $data['stall_type'] ?? 'Quầy hàng',
-            'area_size'  => $data['area_size'],
-            'base_price' => $data['base_price'],
-            'status_id'  => $data['status_id'] ?: $emptyStatusId
+            'id'            => $id,
+            'area_id'       => $data['area_id'],
+            'stall_code'    => $data['stall_code'],
+            'stall_type_id' => $data['stall_type_id'],
+            'area_size'     => $data['area_size'],
+            'base_price'    => $data['base_price'],
+            'status_id'     => $data['status_id'] ?: $emptyStatusId
         ];
 
         return $this->db->query($sql, $params);

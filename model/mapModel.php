@@ -46,9 +46,9 @@ class mapModel {
 
             // 2. Chèn các phần tử sơ đồ mới
             $sqlInsert = "INSERT INTO market_map_elements 
-                            (element_type, element_name, stall_id, pos_x, pos_y, width, height, rotation, color) 
+                            (element_type, element_name, stall_id, pos_x, pos_y, width, height, rotation, color, waypoints, stroke_width) 
                           VALUES 
-                            (:element_type, :element_name, :stall_id, :pos_x, :pos_y, :width, :height, :rotation, :color)";
+                            (:element_type, :element_name, :stall_id, :pos_x, :pos_y, :width, :height, :rotation, :color, :waypoints, :stroke_width)";
 
             $sqlUpdateStall = "UPDATE stalls SET map_coordinate_x = :pos_x, map_coordinate_y = :pos_y WHERE id = :stall_id";
 
@@ -63,6 +63,8 @@ class mapModel {
                     'height'       => (int)$el['height'],
                     'rotation'     => (int)$el['rotation'],
                     'color'        => $el['color'] ?: null,
+                    'waypoints'    => isset($el['waypoints']) ? (is_array($el['waypoints']) ? json_encode($el['waypoints'], JSON_UNESCAPED_UNICODE) : $el['waypoints']) : null,
+                    'stroke_width' => isset($el['stroke_width']) ? (int)$el['stroke_width'] : 24,
                 ];
 
                 $this->db->query($sqlInsert, $params);

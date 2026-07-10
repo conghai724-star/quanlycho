@@ -13,11 +13,12 @@ class foodsafetyModel {
      * Lấy danh sách giấy chứng nhận vệ sinh ATTP, sức khỏe, tập huấn của tiểu thương
      */
     public function getCertificates($traderId = null, $docType = null, $status = null, $search = null) {
-        $sql = "SELECT c.*, t.fullname AS trader_name, t.phone AS trader_phone, t.description AS shop_name,
+        $sql = "SELECT c.*, dt.type_name AS doc_type, dt.type_code, t.fullname AS trader_name, t.phone AS trader_phone, t.description AS shop_name,
                        bl.line_name AS business_line,
                        ss.code AS status_code, ss.status_name, sc.color_class,
                        DATEDIFF(c.expiry_date, CURRENT_DATE) AS days_remaining
                 FROM trader_attp c
+                LEFT JOIN document_types dt ON c.doc_type_id = dt.id
                 LEFT JOIN traders t ON c.trader_id = t.id
                 LEFT JOIN business_lines bl ON bl.id = t.business_line_id
                 LEFT JOIN system_statuses ss ON c.status_id = ss.id
@@ -32,7 +33,7 @@ class foodsafetyModel {
         }
 
         if ($docType) {
-            $sql .= " AND c.doc_type = :doc_type";
+            $sql .= " AND c.doc_type_id = :doc_type";
             $params['doc_type'] = $docType;
         }
 
@@ -56,10 +57,11 @@ class foodsafetyModel {
      * Lấy thông tin một giấy chứng nhận theo ID
      */
     public function getById($id) {
-        $sql = "SELECT c.*, t.fullname AS trader_name, t.phone AS trader_phone, t.description AS shop_name,
+        $sql = "SELECT c.*, dt.type_name AS doc_type, dt.type_code, t.fullname AS trader_name, t.phone AS trader_phone, t.description AS shop_name,
                        ss.code AS status_code, ss.status_name, sc.color_class,
                        DATEDIFF(c.expiry_date, CURRENT_DATE) AS days_remaining
                 FROM trader_attp c
+                LEFT JOIN document_types dt ON c.doc_type_id = dt.id
                 LEFT JOIN traders t ON c.trader_id = t.id
                 LEFT JOIN system_statuses ss ON c.status_id = ss.id
                 LEFT JOIN status_colors sc ON ss.color_id = sc.id
@@ -75,12 +77,12 @@ class foodsafetyModel {
         $statusModel = new statusModel();
         $validStatusId = $statusModel->getIdByCode('attp', 'valid');
 
-        $sql = "INSERT INTO trader_attp (trader_id, doc_type, doc_number, name, description, file, status_id, issuer, issue_date, expiry_date)
-                VALUES (:trader_id, :doc_type, :doc_number, :name, :description, :file, :status_id, :issuer, :issue_date, :expiry_date)";
+        $sql = "INSERT INTO trader_attp (trader_id, doc_type_id, doc_number, name, description, file, status_id, issuer, issue_date, expiry_date)
+                VALUES (:trader_id, :doc_type_id, :doc_number, :name, :description, :file, :status_id, :issuer, :issue_date, :expiry_date)";
         
         $params = [
             'trader_id'   => $data['trader_id'],
-            'doc_type'    => $data['doc_type'], // 'ATTP' | 'Health' | 'Training'
+            'doc_type_id' => $data['doc_type_id'],
             'doc_number'  => $data['doc_number'],
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
@@ -100,7 +102,7 @@ class foodsafetyModel {
     public function updateCertificate($id, $data) {
         $sql = "UPDATE trader_attp 
                 SET trader_id = :trader_id,
-                    doc_type = :doc_type, 
+                    doc_type_id = :doc_type_id, 
                     doc_number = :doc_number, 
                     name = :name, 
                     description = :description, 
@@ -111,7 +113,7 @@ class foodsafetyModel {
         $params = [
             'id'          => $id,
             'trader_id'   => $data['trader_id'],
-            'doc_type'    => $data['doc_type'],
+            'doc_type_id' => $data['doc_type_id'],
             'doc_number'  => $data['doc_number'],
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
@@ -156,17 +158,26 @@ class foodsafetyModel {
         return $this->db->select($sql);
     }
 
-    /**
-     * Tự động quét và cập nhật trạng thái hết hạn của các giấy tờ
-     */
     public function autoUpdateExpiryStatus() {
-        // ponytail: Naive scan on page load. Scale ceiling is medium table (~50k rows). If database grows larger, migrate to daily cron job.
         $today = date('Y-m-d');
-        // Cập nhật các chứng nhận hết hạn thành 'expired'
         $sql = "UPDATE trader_attp 
                 SET status_id = (SELECT id FROM system_statuses WHERE domain = 'attp' AND code = 'expired') 
                 WHERE expiry_date < :today 
                   AND status_id = (SELECT id FROM system_statuses WHERE domain = 'attp' AND code = 'valid')";
         return $this->db->query($sql, ['today' => $today]);
+    }
+
+    /**
+     * Kiểm tra xem số chứng nhận đã tồn tại chưa
+     */
+    public function isDocNumberExists($num, $excludeId = null) {
+        $sql = "SELECT COUNT(*) as count FROM trader_attp WHERE doc_number = :num AND status_id != (SELECT id FROM system_statuses WHERE domain = 'attp' AND code = '99')";
+        $params = ['num' => $num];
+        if ($excludeId !== null) {
+            $sql .= " AND id != :excludeId";
+            $params['excludeId'] = $excludeId;
+        }
+        $res = $this->db->selectOne($sql, $params);
+        return ($res['count'] ?? 0) > 0;
     }
 }
