@@ -3,6 +3,7 @@
  * Controller xử lý các yêu cầu AJAX / API trả về dữ liệu JSON
  */
 class apiController {
+    use httpGuard;
 
     public function __construct() {
         // Chỉ cho phép truy cập API khi đã đăng nhập với quyền admin (user_group = 1)
@@ -1235,70 +1236,7 @@ class apiController {
 
     //--------------KẾT THÚC SƠ ĐỒ CHỢ TƯƠNG TÁC--------------//
 
-    /**
-     * Chặn và trả về lỗi 405 Method Not Allowed nếu sai phương thức HTTP
-     */
-    protected function abort405($expectedMethod, $action, $entity) {
-        if ($_SERVER['REQUEST_METHOD'] !== strtoupper($expectedMethod)) {
-            $this->apiResponse($action, $entity, false, 'method_not_allowed', 405);
-        }
-    }
 
-    /**
-     * Chặn và trả về lỗi 403 Forbidden nếu điều kiện không thỏa mãn
-     */
-    protected function abort403($condition, $action, $entity, $detail = 'Bạn không có quyền thực hiện hành động này.') {
-        if (!$condition) {
-            $this->apiResponse($action, $entity, false, $detail, 403);
-        }
-    }
-
-    /**
-     * Chặn và trả về lỗi 404 Not Found nếu không tìm thấy bản ghi.
-     * Trả về dữ liệu bản ghi nếu tìm thấy.
-     */
-    protected function abort404($model, $method, $id, $action, $entity) {
-        $record = $model->$method($id);
-        if (!$record) {
-            $this->apiResponse($action, $entity, false, 'not_found', 404);
-        }
-        return $record;
-    }
-
-    /**
-     * Chặn và trả về lỗi 400 Bad Request đa năng:
-     * - Nếu $check là chuỗi hoặc mảng: Kiểm tra xem các tham số request tương ứng có bị thiếu/trống không.
-     * - Nếu $check là đối tượng validator: Kiểm tra tính hợp lệ và lấy lỗi đầu tiên.
-     * - Nếu $check là biểu thức boolean/giá trị khác: Chặn nếu giá trị là false/empty (sử dụng cho kiểm tra trùng hoặc nghiệp vụ).
-     */
-    protected function abort400($check, $action, $entity, $detail = '') {
-        // Trường hợp 1: Kiểm tra thiếu tham số (chuỗi hoặc mảng)
-        if (is_string($check) || is_array($check)) {
-            $params = is_array($check) ? $check : [$check];
-            foreach ($params as $param) {
-                $val = $_POST[$param] ?? $_GET[$param] ?? null;
-                if ($val === null || (is_string($val) && trim($val) === '')) {
-                    $this->apiResponse($action, $entity, false, "missing_{$param}", 400);
-                }
-            }
-            return;
-        }
-
-        // Trường hợp 2: Kiểm tra đối tượng validator
-        if ($check instanceof validator) {
-            if (!$check->isValid()) {
-                $errors = $check->getErrors();
-                $firstError = reset($errors);
-                $this->apiResponse($action, $entity, false, $firstError, 400);
-            }
-            return;
-        }
-
-        // Trường hợp 3: Kiểm tra biểu thức logic (boolean/empty)
-        if (!$check) {
-            $this->apiResponse($action, $entity, false, $detail, 400);
-        }
-    }
 
     /**
      * Helper xuất phản hồi JSON
