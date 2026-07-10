@@ -6,7 +6,11 @@
 trait httpGuard {
 
     /**
-     * Chặn và trả về lỗi 405 Method Not Allowed nếu sai phương thức HTTP
+     * Chặn lỗi 405 Method Not Allowed nếu sai phương thức HTTP
+     * 
+     * @param string $expectedMethod Phương thức mong đợi ('POST', 'GET') - Khai báo tĩnh
+     * @param string $action Hành động xử lý ('create', 'delete') - Khai báo tĩnh
+     * @param string $entity Thực thể nghiệp vụ ('trader', 'stall') - Khai báo tĩnh
      */
     protected function abort405(string $expectedMethod, string $action, string $entity) {
         if ($_SERVER['REQUEST_METHOD'] !== strtoupper($expectedMethod)) {
@@ -15,7 +19,12 @@ trait httpGuard {
     }
 
     /**
-     * Chặn và trả về lỗi 403 Forbidden nếu điều kiện không thỏa mãn
+     * Chặn lỗi 403 Forbidden nếu điều kiện không thỏa mãn
+     * 
+     * @param bool $condition Điều kiện để đi tiếp (Ví dụ: kiểm tra quyền) - Biểu thức logic
+     * @param string $action Hành động xử lý ('create', 'delete') - Khai báo tĩnh
+     * @param string $entity Thực thể nghiệp vụ ('trader', 'stall') - Khai báo tĩnh
+     * @param string $detail Thông báo lỗi chi tiết hiển thị cho client - Khai báo tĩnh
      */
     protected function abort403(bool $condition, string $action, string $entity, string $detail = 'Bạn không có quyền thực hiện hành động này.') {
         if (!$condition) {
@@ -24,7 +33,14 @@ trait httpGuard {
     }
 
     /**
-     * Chặn và trả về lỗi 404 Not Found nếu không tìm thấy bản ghi. Trả về dữ liệu bản ghi nếu tìm thấy.
+     * Chặn lỗi 404 Not Found nếu không tìm thấy bản ghi (trả về dữ liệu nếu tìm thấy)
+     * 
+     * @param object $model Đối tượng Model kết nối DB (Ví dụ: new traderModel()) - Khởi tạo từ Controller
+     * @param string $method Tên hàm truy vấn trong Model (Ví dụ: 'getTraderById') - Khai báo tĩnh
+     * @param mixed $id ID của bản ghi cần tìm - Lấy từ request ($_POST['id'] hoặc $_GET['id'])
+     * @param string $action Hành động xử lý ('delete', 'update') - Khai báo tĩnh
+     * @param string $entity Thực thể nghiệp vụ ('trader', 'stall') - Khai báo tĩnh
+     * @return array Dữ liệu bản ghi tìm thấy
      */
     protected function abort404(object $model, string $method, $id, string $action, string $entity): array {
         $record = $model->$method($id);
@@ -35,12 +51,13 @@ trait httpGuard {
     }
 
     /**
-     * Chặn và trả về lỗi 400 Bad Request đa năng (Thiếu tham số, lỗi validator, hoặc điều kiện logic)
+     * Chặn lỗi 400 Bad Request đa năng (Thiếu tham số, lỗi validator, hoặc điều kiện logic)
+     * 
+     * @param mixed $check Tham số cần kiểm tra (Chuỗi/Mảng: tham số request; validator: kiểm tra validate; bool: logic)
+     * @param string $action Hành động xử lý ('create', 'update') - Khai báo tĩnh
+     * @param string $entity Thực thể nghiệp vụ ('trader', 'stall') - Khai báo tĩnh
+     * @param string $detail Thông báo lỗi chi tiết khi kiểm tra logic thất bại - Khai báo tĩnh
      */
-    protected function abort000($check, string $action, string $entity, string $detail = '') {
-        // Ponytail: error status code named method is abort400
-    }
-
     protected function abort400($check, string $action, string $entity, string $detail = '') {
         // Trường hợp 1: Kiểm tra thiếu tham số (chuỗi hoặc mảng)
         if (is_string($check) || is_array($check)) {
@@ -72,6 +89,12 @@ trait httpGuard {
 
     /**
      * Phản hồi lỗi HTTP tập trung (Tự động phát hiện apiResponse của dự án hoặc xuất JSON lỗi mặc định)
+     * 
+     * @param string $action Hành động xử lý - Lấy từ hàm abort truyền sang
+     * @param string $entity Thực thể nghiệp vụ - Lấy từ hàm abort truyền sang
+     * @param bool $isSuccess Trạng thái thành công hay thất bại - Lấy từ hàm abort truyền sang
+     * @param string $detail Thông báo lỗi chi tiết - Lấy từ hàm abort truyền sang
+     * @param int|null $statusCode Mã lỗi HTTP - Lấy từ hàm abort truyền sang
      */
     protected function httpAbortResponse(string $action, string $entity, bool $isSuccess, string $detail = '', ?int $statusCode = null) {
         // Nếu Controller đang dùng có định nghĩa apiResponse thì ưu tiên gọi
