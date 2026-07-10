@@ -7,12 +7,8 @@ trait httpGuard {
 
     /**
      * Chặn và trả về lỗi 405 Method Not Allowed nếu sai phương thức HTTP
-     * 
-     * @param string $expectedMethod Phương thức HTTP mong đợi (Ví dụ: 'POST', 'GET') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @param string $action Hành động đang xử lý (Ví dụ: 'create', 'delete') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @param string $entity Thực thể nghiệp vụ (Ví dụ: 'trader', 'stall') - Lấy từ khai báo tĩnh của lập trình viên.
      */
-    protected function abort405($expectedMethod, $action, $entity) {
+    protected function abort405(string $expectedMethod, string $action, string $entity) {
         if ($_SERVER['REQUEST_METHOD'] !== strtoupper($expectedMethod)) {
             $this->httpAbortResponse($action, $entity, false, 'method_not_allowed', 405);
         }
@@ -20,30 +16,17 @@ trait httpGuard {
 
     /**
      * Chặn và trả về lỗi 403 Forbidden nếu điều kiện không thỏa mãn
-     * 
-     * @param bool $condition Điều kiện để được phép chạy tiếp (true để đi tiếp, false sẽ bị chặn) - Thường là kết quả so sánh quyền.
-     * @param string $action Hành động đang xử lý (Ví dụ: 'create', 'delete') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @param string $entity Thực thể nghiệp vụ (Ví dụ: 'trader', 'stall') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @param string $detail Lý do lỗi chi tiết hiển thị cho client (Mặc định: 'Bạn không có quyền thực hiện hành động này.').
      */
-    protected function abort403($condition, $action, $entity, $detail = 'Bạn không có quyền thực hiện hành động này.') {
+    protected function abort403(bool $condition, string $action, string $entity, string $detail = 'Bạn không có quyền thực hiện hành động này.') {
         if (!$condition) {
             $this->httpAbortResponse($action, $entity, false, $detail, 403);
         }
     }
 
     /**
-     * Chặn và trả về lỗi 404 Not Found nếu không tìm thấy bản ghi.
-     * Trả về dữ liệu bản ghi nếu tìm thấy.
-     * 
-     * @param object $model Đối tượng Model truy vấn DB (Ví dụ: new traderModel()) - Khởi tạo từ Controller.
-     * @param string $method Tên hàm truy vấn trong Model (Ví dụ: 'getTraderById') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @param mixed $id ID của bản ghi cần tìm kiếm - Lấy từ tham số người dùng gửi lên ($_POST['id'] hoặc $_GET['id']).
-     * @param string $action Hành động đang xử lý (Ví dụ: 'delete', 'update') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @param string $entity Thực thể nghiệp vụ (Ví dụ: 'trader', 'stall') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @return array Trả về dữ liệu bản ghi nếu tìm thấy thành công.
+     * Chặn và trả về lỗi 404 Not Found nếu không tìm thấy bản ghi. Trả về dữ liệu bản ghi nếu tìm thấy.
      */
-    protected function abort404($model, $method, $id, $action, $entity) {
+    protected function abort404(object $model, string $method, $id, string $action, string $entity): array {
         $record = $model->$method($id);
         if (!$record) {
             $this->httpAbortResponse($action, $entity, false, 'not_found', 404);
@@ -52,17 +35,13 @@ trait httpGuard {
     }
 
     /**
-     * Chặn và trả về lỗi 400 Bad Request đa năng:
-     * 
-     * @param mixed $check Tham số cần kiểm tra:
-     *                    - Nếu là string|array: Tên các tham số bắt buộc trong Request (Lấy từ $_POST hoặc $_GET).
-     *                    - Nếu là validator: Đối tượng chứa kết quả validate (Khởi tạo từ Controller).
-     *                    - Nếu là bool: Biểu thức logic nghiệp vụ (true để đi tiếp, false sẽ bị chặn).
-     * @param string $action Hành động đang xử lý (Ví dụ: 'create', 'update') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @param string $entity Thực thể nghiệp vụ (Ví dụ: 'trader', 'stall') - Lấy từ khai báo tĩnh của lập trình viên.
-     * @param string $detail Câu thông báo lỗi chi tiết khi kiểm tra boolean thất bại - Lấy từ khai báo tĩnh của lập trình viên.
+     * Chặn và trả về lỗi 400 Bad Request đa năng (Thiếu tham số, lỗi validator, hoặc điều kiện logic)
      */
-    protected function abort400($check, $action, $entity, $detail = '') {
+    protected function abort000($check, string $action, string $entity, string $detail = '') {
+        // Ponytail: error status code named method is abort400
+    }
+
+    protected function abort400($check, string $action, string $entity, string $detail = '') {
         // Trường hợp 1: Kiểm tra thiếu tham số (chuỗi hoặc mảng)
         if (is_string($check) || is_array($check)) {
             $params = is_array($check) ? $check : [$check];
@@ -92,17 +71,9 @@ trait httpGuard {
     }
 
     /**
-     * Phản hồi lỗi HTTP tập trung:
-     * Tự động phát hiện và gọi apiResponse của dự án hiện tại (nếu có)
-     * hoặc tự xuất JSON lỗi tiêu chuẩn nếu mang sang dự án khác.
-     * 
-     * @param string $action Hành động đang xử lý - Lấy từ các hàm abort chuyển sang.
-     * @param string $entity Thực thể nghiệp vụ - Lấy từ các hàm abort chuyển sang.
-     * @param bool $isSuccess Trạng thái thành công hay thất bại - Lấy từ các hàm abort chuyển sang.
-     * @param string $detail Câu báo lỗi chi tiết - Lấy từ các hàm abort chuyển sang.
-     * @param int|null $statusCode Mã lỗi HTTP tương ứng - Lấy từ các hàm abort chuyển sang.
+     * Phản hồi lỗi HTTP tập trung (Tự động phát hiện apiResponse của dự án hoặc xuất JSON lỗi mặc định)
      */
-    protected function httpAbortResponse($action, $entity, $isSuccess, $detail = '', $statusCode = null) {
+    protected function httpAbortResponse(string $action, string $entity, bool $isSuccess, string $detail = '', ?int $statusCode = null) {
         // Nếu Controller đang dùng có định nghĩa apiResponse thì ưu tiên gọi
         if (method_exists($this, 'apiResponse')) {
             $this->apiResponse($action, $entity, $isSuccess, $detail, $statusCode);
