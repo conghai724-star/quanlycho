@@ -414,23 +414,16 @@ class apiController {
      * API gán sạp nhanh cho tiểu thương (AJAX POST)
      */
     public function assignStall() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('create', 'contract', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'create', 'contract');
+        $this->abort400(['stall_id', 'trader_id'], 'create', 'contract', 'Vui lòng chọn đầy đủ sạp và tiểu thương.');
 
-        $stallId = $_POST['stall_id'] ?? null;
-        $traderId = $_POST['trader_id'] ?? null;
-
-        if (!$stallId || !$traderId) {
-            $this->apiResponse('create', 'contract', false, 'Vui lòng chọn đầy đủ sạp và tiểu thương.', 400);
-        }
+        $stallId = $_POST['stall_id'];
+        $traderId = $_POST['trader_id'];
 
         try {
             $stallModel = new stallModel();
             $stall = $stallModel->getById($stallId);
-            if (!$stall || $stall['status'] !== 'empty') {
-                $this->apiResponse('create', 'contract', false, 'Sạp này không còn trống để cho thuê.', 400);
-            }
+            $this->abort400($stall && $stall['status'] === 'empty', 'create', 'contract', 'Sạp này không còn trống để cho thuê.');
 
             $contractModel = new contractModel();
             $contractData = [
@@ -451,7 +444,7 @@ class apiController {
                 'message' => 'Gán sạp cho tiểu thương thành công!'
             ]);
         } catch (Exception $e) {
-            $this->apiResponse('create', 'contract', false, $e->getMessage(), 500);
+            $this->abort500($e, 'create', 'contract');
         }
     }
 
@@ -459,16 +452,11 @@ class apiController {
      * API chuyển đổi sạp của tiểu thương (AJAX POST)
      */
     public function transferStall() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('update', 'stall', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'update', 'stall');
+        $this->abort400(['current_stall_id', 'new_stall_id'], 'update', 'stall', 'Thiếu thông tin sạp hiện tại hoặc sạp mới.');
 
-        $currentStallId = $_POST['current_stall_id'] ?? null;
-        $newStallId = $_POST['new_stall_id'] ?? null;
-
-        if (!$currentStallId || !$newStallId) {
-            $this->apiResponse('update', 'stall', false, 'Thiếu thông tin sạp hiện tại hoặc sạp mới.', 400);
-        }
+        $currentStallId = $_POST['current_stall_id'];
+        $newStallId = $_POST['new_stall_id'];
 
         try {
             $db = database::getInstance();
@@ -476,16 +464,12 @@ class apiController {
             $stallModel = new stallModel();
             $currentStall = $stallModel->getById($currentStallId);
             $newStall = $stallModel->getById($newStallId);
-            if (!$currentStall || !$newStall) {
-                $this->apiResponse('update', 'stall', false, 'Không tìm thấy thông tin sạp.', 404);
-            }
+            $this->abort400($currentStall && $newStall, 'update', 'stall', 'Không tìm thấy thông tin sạp.');
 
             // Lấy hợp đồng hoạt động của sạp hiện tại
             $sqlContract1 = "SELECT * FROM contracts WHERE stall_id = :stall_id AND status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active') LIMIT 1";
             $contract1 = $db->selectOne($sqlContract1, ['stall_id' => $currentStallId]);
-            if (!$contract1) {
-                $this->apiResponse('update', 'stall', false, 'Không tìm thấy hợp đồng đang hoạt động cho sạp hiện tại.', 404);
-            }
+            $this->abort400($contract1 !== null && $contract1 !== false, 'update', 'stall', 'Không tìm thấy hợp đồng đang hoạt động cho sạp hiện tại.');
 
             $db->beginTransaction();
 
@@ -550,10 +534,7 @@ class apiController {
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
-            $this->response([
-                'status' => 500,
-                'message' => 'Lỗi hệ thống: ' . $e->getMessage()
-            ], 500);
+            $this->abort500($e, 'update', 'stall');
         }
     }
 
@@ -638,9 +619,7 @@ class apiController {
      * API thêm hợp đồng mới (AJAX POST)
      */
     public function addContract() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('create', 'contract', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'create', 'contract');
 
         $data = [
             'trader_id'       => $_POST['trader_id'] ?? '',
@@ -663,14 +642,8 @@ class apiController {
                   ->required('end_date', $data['end_date'], 'Vui lòng nhập ngày hết hạn.')
                   ->required('deposit', $data['deposit'], 'Vui lòng nhập tiền đặt cọc.');
 
-        if (!$validator->isValid()) {
-            $errors = $validator->getErrors();
-            $this->apiResponse('create', 'contract', false, reset($errors), 400);
-        }
-
-        if (strtotime($data['start_date']) > strtotime($data['end_date'])) {
-            $this->apiResponse('create', 'contract', false, 'Ngày bắt đầu không được lớn hơn ngày kết thúc.', 400);
-        }
+        $this->abort400($validator, 'create', 'contract');
+        $this->abort400(strtotime($data['start_date']) <= strtotime($data['end_date']), 'create', 'contract', 'Ngày bắt đầu không được lớn hơn ngày kết thúc.');
 
         try {
             $db = database::getInstance();
@@ -678,32 +651,25 @@ class apiController {
             
             // Kiểm tra trùng số hợp đồng
             $checkNum = $db->selectOne("SELECT COUNT(*) as count FROM contracts WHERE contract_number = :num AND status_id != (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = '99')", ['num' => $data['contract_number']]);
-            if (($checkNum['count'] ?? 0) > 0) {
-                $this->apiResponse('create', 'contract', false, 'Số hợp đồng này đã tồn tại trên hệ thống.', 400);
-            }
+            $this->abort400(($checkNum['count'] ?? 0) == 0, 'create', 'contract', 'Số hợp đồng này đã tồn tại trên hệ thống.');
 
             // Kiểm tra xem sạp có đang trống hay không
             $stallModel = new stallModel();
             $stall = $stallModel->getById($data['stall_id']);
-            if (!$stall || $stall['status'] !== 'empty') {
-                $this->apiResponse('create', 'contract', false, 'Sạp được chọn không còn trống để cho thuê.', 400);
-            }
+            $this->abort400($stall && $stall['status'] === 'empty', 'create', 'contract', 'Sạp được chọn không còn trống để cho thuê.');
 
             // Xử lý upload file PDF đính kèm (nếu có)
             if (isset($_FILES['contract_file']) && $_FILES['contract_file']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploader = new upload('contracts', ['pdf'], 15); // Chỉ nhận file PDF
                 $savedFile = $uploader->save('contract_file');
-                if ($savedFile === false) {
-                    $errors = $uploader->getErrors();
-                    $this->apiResponse('create', 'contract', false, 'Lỗi tải file hợp đồng: ' . reset($errors), 400);
-                }
+                $this->abort400($savedFile !== false, 'create', 'contract', 'Lỗi tải file hợp đồng: ' . reset($uploader->getErrors()));
                 $data['contract_file'] = $savedFile;
             }
 
             $contractModel->create($data);
             $this->apiResponse('create', 'contract', true);
         } catch (Exception $e) {
-            $this->apiResponse('create', 'contract', false, $e->getMessage(), 500);
+            $this->abort500($e, 'create', 'contract');
         }
     }
 
@@ -711,32 +677,22 @@ class apiController {
      * API gia hạn hợp đồng (AJAX POST)
      */
     public function renewContract() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('update', 'contract', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'update', 'contract');
+        $this->abort400(['contract_id', 'new_end_date'], 'update', 'contract', 'Thiếu thông tin gia hạn.');
 
-        $contractId = $_POST['contract_id'] ?? null;
-        $newEndDate = $_POST['new_end_date'] ?? null;
-
-        if (!$contractId || !$newEndDate) {
-            $this->apiResponse('update', 'contract', false, 'Thiếu thông tin gia hạn.', 400);
-        }
+        $contractId = $_POST['contract_id'];
+        $newEndDate = $_POST['new_end_date'];
 
         try {
             $contractModel = new contractModel();
-            $contract = $contractModel->getById($contractId);
-            if (!$contract) {
-                $this->apiResponse('update', 'contract', false, 'Không tìm thấy hợp đồng.', 404);
-            }
+            $contract = $this->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
 
-            if (strtotime($newEndDate) <= strtotime($contract['end_date'])) {
-                $this->apiResponse('update', 'contract', false, 'Ngày gia hạn mới phải sau ngày hết hạn hiện tại (' . $contract['end_date'] . ').', 400);
-            }
+            $this->abort400(strtotime($newEndDate) > strtotime($contract['end_date']), 'update', 'contract', 'Ngày gia hạn mới phải sau ngày hết hạn hiện tại (' . $contract['end_date'] . ').');
 
             $contractModel->renew($contractId, $newEndDate);
             $this->apiResponse('update', 'contract', true);
         } catch (Exception $e) {
-            $this->apiResponse('update', 'contract', false, $e->getMessage(), 500);
+            $this->abort500($e, 'update', 'contract');
         }
     }
 
@@ -744,26 +700,19 @@ class apiController {
      * API thanh lý hợp đồng (AJAX POST)
      */
     public function liquidateContract() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('update', 'contract', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'update', 'contract');
+        $this->abort400('contract_id', 'update', 'contract');
 
-        $contractId = $_POST['contract_id'] ?? null;
-        if (!$contractId) {
-            $this->apiResponse('update', 'contract', false, 'missing_id', 400);
-        }
+        $contractId = $_POST['contract_id'];
 
         try {
             $contractModel = new contractModel();
-            $contract = $contractModel->getById($contractId);
-            if (!$contract) {
-                $this->apiResponse('update', 'contract', false, 'Không tìm thấy hợp đồng.', 404);
-            }
+            $this->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
 
             $contractModel->liquidate($contractId);
             $this->apiResponse('update', 'contract', true);
         } catch (Exception $e) {
-            $this->apiResponse('update', 'contract', false, $e->getMessage(), 500);
+            $this->abort500($e, 'update', 'contract');
         }
     }
 
@@ -771,26 +720,19 @@ class apiController {
      * API chấm dứt hợp đồng trước hạn (AJAX POST)
      */
     public function terminateContract() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('update', 'contract', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'update', 'contract');
+        $this->abort400('contract_id', 'update', 'contract');
 
-        $contractId = $_POST['contract_id'] ?? null;
-        if (!$contractId) {
-            $this->apiResponse('update', 'contract', false, 'missing_id', 400);
-        }
+        $contractId = $_POST['contract_id'];
 
         try {
             $contractModel = new contractModel();
-            $contract = $contractModel->getById($contractId);
-            if (!$contract) {
-                $this->apiResponse('update', 'contract', false, 'Không tìm thấy hợp đồng.', 404);
-            }
+            $this->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
 
             $contractModel->terminate($contractId);
             $this->apiResponse('update', 'contract', true);
         } catch (Exception $e) {
-            $this->apiResponse('update', 'contract', false, $e->getMessage(), 500);
+            $this->abort500($e, 'update', 'contract');
         }
     }
 
@@ -798,26 +740,19 @@ class apiController {
      * API xóa mềm hợp đồng (AJAX POST - status_id = 99)
      */
     public function deleteContract() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('delete', 'contract', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'delete', 'contract');
+        $this->abort400('contract_id', 'delete', 'contract');
 
-        $contractId = $_POST['contract_id'] ?? null;
-        if (!$contractId) {
-            $this->apiResponse('delete', 'contract', false, 'missing_id', 400);
-        }
+        $contractId = $_POST['contract_id'];
 
         try {
             $contractModel = new contractModel();
-            $contract = $contractModel->getById($contractId);
-            if (!$contract) {
-                $this->apiResponse('delete', 'contract', false, 'Không tìm thấy hợp đồng.', 404);
-            }
+            $this->abort404($contractModel, 'getById', $contractId, 'delete', 'contract');
 
             $contractModel->softDelete($contractId);
             $this->apiResponse('delete', 'contract', true);
         } catch (Exception $e) {
-            $this->apiResponse('delete', 'contract', false, $e->getMessage(), 500);
+            $this->abort500($e, 'delete', 'contract');
         }
     }
 
@@ -825,9 +760,7 @@ class apiController {
      * API thêm phụ lục hợp đồng (AJAX POST)
      */
     public function addContractAppendix() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('create', 'appendix', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'create', 'appendix');
 
         $data = [
             'contract_id'     => $_POST['contract_id'] ?? '',
@@ -846,27 +779,19 @@ class apiController {
                   ->required('effect_date', $data['effect_date'], 'Vui lòng nhập ngày có hiệu lực.')
                   ->required('content', $data['content'], 'Nội dung phụ lục không được để trống.');
 
-        if (!$validator->isValid()) {
-            $errors = $validator->getErrors();
-            $this->apiResponse('create', 'appendix', false, reset($errors), 400);
-        }
+        $this->abort400($validator, 'create', 'appendix');
 
         try {
             $db = database::getInstance();
             // Kiểm tra trùng số phụ lục
             $checkNum = $db->selectOne("SELECT COUNT(*) as count FROM contract_appendices WHERE appendix_number = :num", ['num' => $data['appendix_number']]);
-            if (($checkNum['count'] ?? 0) > 0) {
-                $this->apiResponse('create', 'appendix', false, 'Số phụ lục này đã tồn tại trên hệ thống.', 400);
-            }
+            $this->abort400(($checkNum['count'] ?? 0) == 0, 'create', 'appendix', 'Số phụ lục này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file phụ lục (nếu có)
             if (isset($_FILES['appendix_file']) && $_FILES['appendix_file']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploader = new upload('contracts/appendices', ['jpg', 'jpeg', 'png', 'pdf'], 15);
                 $savedFile = $uploader->save('appendix_file');
-                if ($savedFile === false) {
-                    $errors = $uploader->getErrors();
-                    $this->apiResponse('create', 'appendix', false, 'Lỗi tải file phụ lục: ' . reset($errors), 400);
-                }
+                $this->abort400($savedFile !== false, 'create', 'appendix', 'Lỗi tải file phụ lục: ' . reset($uploader->getErrors()));
                 $data['file'] = $savedFile;
             }
 
@@ -874,7 +799,7 @@ class apiController {
             $contractModel->addAppendix($data);
             $this->apiResponse('create', 'appendix', true);
         } catch (Exception $e) {
-            $this->apiResponse('create', 'appendix', false, $e->getMessage(), 500);
+            $this->abort500($e, 'create', 'appendix');
         }
     }
 
@@ -969,10 +894,11 @@ class apiController {
     /**
      * API thêm giấy tờ vệ sinh ATTP mới (AJAX POST)
      */
+    /**
+     * API thêm giấy tờ vệ sinh ATTP mới (AJAX POST)
+     */
     public function addCertificate() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('create', 'certificate', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'create', 'certificate');
 
         $data = [
             'trader_id'   => $_POST['trader_id'] ?? '',
@@ -986,37 +912,27 @@ class apiController {
         ];
 
         // Validation các trường bắt buộc
-        $errors = [];
-        if (empty($data['trader_id'])) $errors[] = 'Bạn phải chọn tiểu thương.';
-        if (empty($data['doc_type'])) $errors[] = 'Bạn phải chọn loại giấy tờ.';
-        if (empty($data['doc_number'])) $errors[] = 'Bạn phải nhập số giấy tờ/chứng nhận.';
-        if (empty($data['name'])) $errors[] = 'Bạn phải nhập tên giấy tờ.';
-        if (empty($data['issue_date'])) $errors[] = 'Bạn phải nhập ngày hiệu lực bắt đầu.';
-        if (empty($data['expiry_date'])) $errors[] = 'Bạn phải nhập ngày hiệu lực kết thúc.';
+        $validator = new validator();
+        $validator->required('trader_id', $data['trader_id'], 'Bạn phải chọn tiểu thương.')
+                  ->required('doc_type', $data['doc_type'], 'Bạn phải chọn loại giấy tờ.')
+                  ->required('doc_number', $data['doc_number'], 'Bạn phải nhập số giấy tờ/chứng nhận.')
+                  ->required('name', $data['name'], 'Bạn phải nhập tên giấy tờ.')
+                  ->required('issue_date', $data['issue_date'], 'Bạn phải nhập ngày hiệu lực bắt đầu.')
+                  ->required('expiry_date', $data['expiry_date'], 'Bạn phải nhập ngày hiệu lực kết thúc.');
 
-        if (!empty($errors)) {
-            $this->apiResponse('create', 'certificate', false, reset($errors), 400);
-        }
-
-        if (strtotime($data['issue_date']) > strtotime($data['expiry_date'])) {
-            $this->apiResponse('create', 'certificate', false, 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.', 400);
-        }
+        $this->abort400($validator, 'create', 'certificate');
+        $this->abort400(strtotime($data['issue_date']) <= strtotime($data['expiry_date']), 'create', 'certificate', 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.');
 
         try {
             $db = database::getInstance();
             $checkNum = $db->selectOne("SELECT COUNT(*) as count FROM trader_attp WHERE doc_number = :num AND status_id != (SELECT id FROM system_statuses WHERE domain = 'attp' AND code = '99')", ['num' => $data['doc_number']]);
-            if (($checkNum['count'] ?? 0) > 0) {
-                $this->apiResponse('create', 'certificate', false, 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.', 400);
-            }
+            $this->abort400(($checkNum['count'] ?? 0) == 0, 'create', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file đính kèm (nếu có)
             if (isset($_FILES['certificate_file']) && $_FILES['certificate_file']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploader = new upload('foodsafety', ['jpg', 'jpeg', 'png', 'pdf'], 15);
                 $savedFile = $uploader->save('certificate_file');
-                if ($savedFile === false) {
-                    $errors = $uploader->getErrors();
-                    $this->apiResponse('create', 'certificate', false, 'Lỗi tải file đính kèm: ' . reset($errors), 400);
-                }
+                $this->abort400($savedFile !== false, 'create', 'certificate', 'Lỗi tải file đính kèm: ' . reset($uploader->getErrors()));
                 $data['file'] = $savedFile;
             }
 
@@ -1024,7 +940,7 @@ class apiController {
             $foodsafetyModel->createCertificate($data);
             $this->apiResponse('create', 'certificate', true);
         } catch (Exception $e) {
-            $this->apiResponse('create', 'certificate', false, $e->getMessage(), 500);
+            $this->abort500($e, 'create', 'certificate');
         }
     }
 
@@ -1032,14 +948,10 @@ class apiController {
      * API cập nhật giấy tờ vệ sinh ATTP (AJAX POST)
      */
     public function editCertificate() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('update', 'certificate', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'update', 'certificate');
+        $this->abort400('id', 'update', 'certificate');
 
-        $id = $_POST['id'] ?? '';
-        if (empty($id)) {
-            $this->apiResponse('update', 'certificate', false, 'Thiếu ID giấy tờ.', 400);
-        }
+        $id = $_POST['id'];
 
         $data = [
             'trader_id'   => $_POST['trader_id'] ?? '',
@@ -1053,37 +965,27 @@ class apiController {
         ];
 
         // Validation các trường bắt buộc
-        $errors = [];
-        if (empty($data['trader_id'])) $errors[] = 'Bạn phải chọn tiểu thương.';
-        if (empty($data['doc_type'])) $errors[] = 'Bạn phải chọn loại giấy tờ.';
-        if (empty($data['doc_number'])) $errors[] = 'Bạn phải nhập số giấy tờ/chứng nhận.';
-        if (empty($data['name'])) $errors[] = 'Bạn phải nhập tên giấy tờ.';
-        if (empty($data['issue_date'])) $errors[] = 'Bạn phải nhập ngày hiệu lực bắt đầu.';
-        if (empty($data['expiry_date'])) $errors[] = 'Bạn phải nhập ngày hiệu lực kết thúc.';
+        $validator = new validator();
+        $validator->required('trader_id', $data['trader_id'], 'Bạn phải chọn tiểu thương.')
+                  ->required('doc_type', $data['doc_type'], 'Bạn phải chọn loại giấy tờ.')
+                  ->required('doc_number', $data['doc_number'], 'Bạn phải nhập số giấy tờ/chứng nhận.')
+                  ->required('name', $data['name'], 'Bạn phải nhập tên giấy tờ.')
+                  ->required('issue_date', $data['issue_date'], 'Bạn phải nhập ngày hiệu lực bắt đầu.')
+                  ->required('expiry_date', $data['expiry_date'], 'Bạn phải nhập ngày hiệu lực kết thúc.');
 
-        if (!empty($errors)) {
-            $this->apiResponse('update', 'certificate', false, reset($errors), 400);
-        }
-
-        if (strtotime($data['issue_date']) > strtotime($data['expiry_date'])) {
-            $this->apiResponse('update', 'certificate', false, 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.', 400);
-        }
+        $this->abort400($validator, 'update', 'certificate');
+        $this->abort400(strtotime($data['issue_date']) <= strtotime($data['expiry_date']), 'update', 'certificate', 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.');
 
         try {
             $db = database::getInstance();
             $checkNum = $db->selectOne("SELECT COUNT(*) as count FROM trader_attp WHERE doc_number = :num AND id != :id AND status_id != (SELECT id FROM system_statuses WHERE domain = 'attp' AND code = '99')", ['num' => $data['doc_number'], 'id' => $id]);
-            if (($checkNum['count'] ?? 0) > 0) {
-                $this->apiResponse('update', 'certificate', false, 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.', 400);
-            }
+            $this->abort400(($checkNum['count'] ?? 0) == 0, 'update', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file đính kèm (nếu có)
             if (isset($_FILES['certificate_file']) && $_FILES['certificate_file']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploader = new upload('foodsafety', ['jpg', 'jpeg', 'png', 'pdf'], 15);
                 $savedFile = $uploader->save('certificate_file');
-                if ($savedFile === false) {
-                    $errors = $uploader->getErrors();
-                    $this->apiResponse('update', 'certificate', false, 'Lỗi tải file đính kèm: ' . reset($errors), 400);
-                }
+                $this->abort400($savedFile !== false, 'update', 'certificate', 'Lỗi tải file đính kèm: ' . reset($uploader->getErrors()));
                 $data['file'] = $savedFile;
             }
 
@@ -1100,7 +1002,7 @@ class apiController {
             $foodsafetyModel->updateCertificate($id, $data);
             $this->apiResponse('update', 'certificate', true);
         } catch (Exception $e) {
-            $this->apiResponse('update', 'certificate', false, $e->getMessage(), 500);
+            $this->abort500($e, 'update', 'certificate');
         }
     }
 
@@ -1108,21 +1010,17 @@ class apiController {
      * API xóa mềm giấy tờ vệ sinh ATTP (AJAX POST)
      */
     public function deleteCertificate() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('delete', 'certificate', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'delete', 'certificate');
+        $this->abort400('id', 'delete', 'certificate');
 
-        $id = $_POST['id'] ?? '';
-        if (empty($id)) {
-            $this->apiResponse('delete', 'certificate', false, 'Thiếu ID giấy tờ.', 400);
-        }
+        $id = $_POST['id'];
 
         try {
             $foodsafetyModel = new foodsafetyModel();
             $foodsafetyModel->deleteCertificate($id);
             $this->apiResponse('delete', 'certificate', true);
         } catch (Exception $e) {
-            $this->apiResponse('delete', 'certificate', false, $e->getMessage(), 500);
+            $this->abort500($e, 'delete', 'certificate');
         }
     }
 
