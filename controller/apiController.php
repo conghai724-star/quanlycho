@@ -256,9 +256,7 @@ class apiController {
      * API thêm sạp mới (AJAX POST)
      */
     public function addStall() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('create', 'stall', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'create', 'stall');
 
         $data = [
             'area_id'    => $_POST['area_id'] ?? '',
@@ -279,23 +277,16 @@ class apiController {
                   ->numeric('base_price', $data['base_price'], 'Đơn giá thuê phải là dạng số.')
                   ->min('base_price', $data['base_price'], 0, 'Đơn giá thuê không được âm.');
 
-        if (!$validator->isValid()) {
-            $errors = $validator->getErrors();
-            $firstError = reset($errors);
-            $this->apiResponse('create', 'stall', false, $firstError, 400);
-        }
+        $this->abort400($validator, 'create', 'stall');
 
         try {
             $stallModel = new stallModel();
-            
-            if ($stallModel->isStallCodeExists($data['stall_code'])) {
-                $this->apiResponse('create', 'stall', false, 'Mã sạp đã tồn tại trên hệ thống', 400);
-            }
+            $this->abort400(!$stallModel->isStallCodeExists($data['stall_code']), 'create', 'stall', 'Mã sạp đã tồn tại trên hệ thống');
 
             $stallModel->create($data);
             $this->apiResponse('create', 'stall', true);
         } catch (Exception $e) {
-            $this->apiResponse('create', 'stall', false, $e->getMessage(), 500);
+            $this->abort500($e, 'create', 'stall');
         }
     }
 
@@ -303,14 +294,10 @@ class apiController {
      * API cập nhật sạp (AJAX POST)
      */
     public function editStall() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('update', 'stall', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'update', 'stall');
+        $this->abort400('id', 'update', 'stall');
 
-        $id = $_POST['id'] ?? null;
-        if (!$id) {
-            $this->apiResponse('update', 'stall', false, 'missing_id', 400);
-        }
+        $id = $_POST['id'];
 
         $data = [
             'area_id'    => $_POST['area_id'] ?? '',
@@ -331,27 +318,18 @@ class apiController {
                   ->numeric('base_price', $data['base_price'], 'Đơn giá thuê phải là dạng số.')
                   ->min('base_price', $data['base_price'], 0, 'Đơn giá thuê không được âm.');
 
-        if (!$validator->isValid()) {
-            $errors = $validator->getErrors();
-            $firstError = reset($errors);
-            $this->apiResponse('update', 'stall', false, $firstError, 400);
-        }
+        $this->abort400($validator, 'update', 'stall');
 
         try {
             $stallModel = new stallModel();
-            $stall = $stallModel->getById($id);
-            if (!$stall) {
-                $this->apiResponse('update', 'stall', false, 'not_found', 404);
-            }
+            $this->abort404($stallModel, 'getById', $id, 'update', 'stall');
 
-            if ($stallModel->isStallCodeExists($data['stall_code'], $id)) {
-                $this->apiResponse('update', 'stall', false, 'Mã sạp đã tồn tại trên hệ thống', 400);
-            }
+            $this->abort400(!$stallModel->isStallCodeExists($data['stall_code'], $id), 'update', 'stall', 'Mã sạp đã tồn tại trên hệ thống');
 
             $stallModel->update($id, $data);
             $this->apiResponse('update', 'stall', true);
         } catch (Exception $e) {
-            $this->apiResponse('update', 'stall', false, $e->getMessage(), 500);
+            $this->abort500($e, 'update', 'stall');
         }
     }
 
@@ -359,30 +337,21 @@ class apiController {
      * API xóa sạp (AJAX POST)
      */
     public function deleteStall() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('delete', 'stall', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'delete', 'stall');
+        $this->abort400('id', 'delete', 'stall');
 
-        $id = $_POST['id'] ?? null;
-        if (!$id) {
-            $this->apiResponse('delete', 'stall', false, 'missing_id', 400);
-        }
+        $id = $_POST['id'];
 
         try {
             $stallModel = new stallModel();
-            $stall = $stallModel->getById($id);
-            if (!$stall) {
-                $this->apiResponse('delete', 'stall', false, 'not_found', 404);
-            }
+            $this->abort404($stallModel, 'getById', $id, 'delete', 'stall');
 
-            if ($stallModel->hasActiveContract($id)) {
-                $this->apiResponse('delete', 'stall', false, 'Sạp đang có hợp đồng hoạt động, không thể xóa.', 400);
-            }
+            $this->abort400(!$stallModel->hasActiveContract($id), 'delete', 'stall', 'Sạp đang có hợp đồng hoạt động, không thể xóa.');
 
             $stallModel->delete($id);
             $this->apiResponse('delete', 'stall', true);
         } catch (Exception $e) {
-            $this->apiResponse('delete', 'stall', false, $e->getMessage(), 500);
+            $this->abort500($e, 'delete', 'stall');
         }
     }
 
