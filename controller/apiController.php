@@ -68,21 +68,14 @@ class apiController {
      * API xóa tiểu thương (AJAX POST)
      */
     public function deleteTrader() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('delete', 'trader', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'delete', 'trader');
+        $this->abort400('id', 'delete', 'trader');
 
-        $id = $_POST['id'] ?? null;
-        if (!$id) {
-            $this->apiResponse('delete', 'trader', false, 'missing_id', 400);
-        }
+        $id = $_POST['id'];
 
         try {
             $traderModel = new traderModel();
-            $trader = $traderModel->getTraderById($id);
-            if (!$trader) {
-                $this->apiResponse('delete', 'trader', false, 'not_found', 404);
-            }
+            $trader = $this->abort404($traderModel, 'getTraderById', $id, 'delete', 'trader');
 
             $traderModel->deleteTrader($id);
             $this->apiResponse('delete', 'trader', true);
@@ -94,10 +87,11 @@ class apiController {
     /**
      * API thêm tiểu thương mới (AJAX POST)
      */
+    /**
+     * API thêm tiểu thương mới (AJAX POST)
+     */
     public function addTrader() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('create', 'trader', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'create', 'trader');
 
         $data = [
             'trader_code'      => $_POST['trader_code'] ?? '',
@@ -118,24 +112,14 @@ class apiController {
                   ->phone('phone', $data['phone'], 'Số điện thoại không đúng định dạng Việt Nam.')
                   ->required('cccd', $data['cccd'], 'Số CCCD không được để trống.');
 
-        if (!$validator->isValid()) {
-            $errors = $validator->getErrors();
-            $firstError = reset($errors);
-            $this->apiResponse('create', 'trader', false, $firstError, 400);
-        }
+        $this->abort400($validator, 'create', 'trader');
 
         try {
             $traderModel = new traderModel();
             
-            // Kiểm tra trùng lặp mã tiểu thương
-            if ($traderModel->isTraderCodeExists($data['trader_code'])) {
-                $this->apiResponse('create', 'trader', false, 'Mã tiểu thương đã tồn tại trên hệ thống', 400);
-            }
-            
-            // Kiểm tra trùng lặp CCCD
-            if ($traderModel->isCccdExists($data['cccd'])) {
-                $this->apiResponse('create', 'trader', false, 'Số CCCD đã tồn tại trên hệ thống', 400);
-            }
+            // Kiểm tra trùng lặp
+            $this->abort400(!$traderModel->isTraderCodeExists($data['trader_code']), 'create', 'trader', 'Mã tiểu thương đã tồn tại trên hệ thống');
+            $this->abort400(!$traderModel->isCccdExists($data['cccd']), 'create', 'trader', 'Số CCCD đã tồn tại trên hệ thống');
 
             // Xử lý upload nhiều tài liệu đính kèm (nếu có)
             $uploadedFiles = [];
@@ -155,10 +139,7 @@ class apiController {
                     ];
                     $uploader = new upload('traders', ['jpg', 'jpeg', 'png', 'pdf'], 10);
                     $savedFile = $uploader->save('temp_upload_file');
-                    if ($savedFile === false) {
-                        $errors = $uploader->getErrors();
-                        $this->apiResponse('create', 'trader', false, "Lỗi file '" . $files['name'][$i] . "': " . reset($errors), 400);
-                    }
+                    $this->abort400($savedFile !== false, 'create', 'trader', "Lỗi file '" . $files['name'][$i] . "': " . reset($uploader->getErrors()));
                     $uploadedFiles[] = $savedFile;
                 }
             }
@@ -175,14 +156,10 @@ class apiController {
      * API sửa thông tin tiểu thương (AJAX POST)
      */
     public function editTrader() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->apiResponse('update', 'trader', false, 'method_not_allowed', 405);
-        }
+        $this->abort405('POST', 'update', 'trader');
+        $this->abort400('id', 'update', 'trader');
 
-        $id = $_POST['id'] ?? null;
-        if (!$id) {
-            $this->apiResponse('update', 'trader', false, 'missing_id', 400);
-        }
+        $id = $_POST['id'];
 
         $data = [
             'fullname'         => $_POST['fullname'] ?? '',
@@ -201,23 +178,14 @@ class apiController {
                   ->phone('phone', $data['phone'], 'Số điện thoại không đúng định dạng Việt Nam.')
                   ->required('cccd', $data['cccd'], 'Số CCCD không được để trống.');
 
-        if (!$validator->isValid()) {
-            $errors = $validator->getErrors();
-            $firstError = reset($errors);
-            $this->apiResponse('update', 'trader', false, $firstError, 400);
-        }
+        $this->abort400($validator, 'update', 'trader');
 
         try {
             $traderModel = new traderModel();
-            $trader = $traderModel->getTraderById($id);
-            if (!$trader) {
-                $this->apiResponse('update', 'trader', false, 'not_found', 404);
-            }
+            $trader = $this->abort404($traderModel, 'getTraderById', $id, 'update', 'trader');
 
             // Kiểm tra trùng lặp số CCCD (loại trừ bản ghi hiện tại)
-            if ($traderModel->isCccdExists($data['cccd'], $id)) {
-                $this->apiResponse('update', 'trader', false, 'Số CCCD đã tồn tại trên hệ thống', 400);
-            }
+            $this->abort400(!$traderModel->isCccdExists($data['cccd'], $id), 'update', 'trader', 'Số CCCD đã tồn tại trên hệ thống');
 
             // Xử lý các file cũ còn lại sau khi người dùng xóa bớt trên giao diện
             $existingFiles = [];
@@ -246,10 +214,7 @@ class apiController {
                     ];
                     $uploader = new upload('traders', ['jpg', 'jpeg', 'png', 'pdf'], 10);
                     $savedFile = $uploader->save('temp_upload_file');
-                    if ($savedFile === false) {
-                        $errors = $uploader->getErrors();
-                        $this->apiResponse('update', 'trader', false, "Lỗi file '" . $files['name'][$i] . "': " . reset($errors), 400);
-                    }
+                    $this->abort400($savedFile !== false, 'update', 'trader', "Lỗi file '" . $files['name'][$i] . "': " . reset($uploader->getErrors()));
                     $uploadedFiles[] = $savedFile;
                 }
             }
@@ -273,7 +238,7 @@ class apiController {
         ], $code);
     }
 //--------------KẾT THÚC QUẢN LÝ TIỂU THƯƠNG--------------//
-//--------------BẮT ĐẦU QUẢN LÝ SẶP CHỢ--------------//
+//--------------BẮT ĐẦU QUẢN LÝ SẠP CHỢ--------------//
 
     /**
      * API lọc và tìm kiếm sạp chợ qua AJAX
@@ -1269,6 +1234,71 @@ class apiController {
     }
 
     //--------------KẾT THÚC SƠ ĐỒ CHỢ TƯƠNG TÁC--------------//
+
+    /**
+     * Chặn và trả về lỗi 405 Method Not Allowed nếu sai phương thức HTTP
+     */
+    protected function abort405($expectedMethod, $action, $entity) {
+        if ($_SERVER['REQUEST_METHOD'] !== strtoupper($expectedMethod)) {
+            $this->apiResponse($action, $entity, false, 'method_not_allowed', 405);
+        }
+    }
+
+    /**
+     * Chặn và trả về lỗi 403 Forbidden nếu điều kiện không thỏa mãn
+     */
+    protected function abort403($condition, $action, $entity, $detail = 'Bạn không có quyền thực hiện hành động này.') {
+        if (!$condition) {
+            $this->apiResponse($action, $entity, false, $detail, 403);
+        }
+    }
+
+    /**
+     * Chặn và trả về lỗi 404 Not Found nếu không tìm thấy bản ghi.
+     * Trả về dữ liệu bản ghi nếu tìm thấy.
+     */
+    protected function abort404($model, $method, $id, $action, $entity) {
+        $record = $model->$method($id);
+        if (!$record) {
+            $this->apiResponse($action, $entity, false, 'not_found', 404);
+        }
+        return $record;
+    }
+
+    /**
+     * Chặn và trả về lỗi 400 Bad Request đa năng:
+     * - Nếu $check là chuỗi hoặc mảng: Kiểm tra xem các tham số request tương ứng có bị thiếu/trống không.
+     * - Nếu $check là đối tượng validator: Kiểm tra tính hợp lệ và lấy lỗi đầu tiên.
+     * - Nếu $check là biểu thức boolean/giá trị khác: Chặn nếu giá trị là false/empty (sử dụng cho kiểm tra trùng hoặc nghiệp vụ).
+     */
+    protected function abort400($check, $action, $entity, $detail = '') {
+        // Trường hợp 1: Kiểm tra thiếu tham số (chuỗi hoặc mảng)
+        if (is_string($check) || is_array($check)) {
+            $params = is_array($check) ? $check : [$check];
+            foreach ($params as $param) {
+                $val = $_POST[$param] ?? $_GET[$param] ?? null;
+                if ($val === null || (is_string($val) && trim($val) === '')) {
+                    $this->apiResponse($action, $entity, false, "missing_{$param}", 400);
+                }
+            }
+            return;
+        }
+
+        // Trường hợp 2: Kiểm tra đối tượng validator
+        if ($check instanceof validator) {
+            if (!$check->isValid()) {
+                $errors = $check->getErrors();
+                $firstError = reset($errors);
+                $this->apiResponse($action, $entity, false, $firstError, 400);
+            }
+            return;
+        }
+
+        // Trường hợp 3: Kiểm tra biểu thức logic (boolean/empty)
+        if (!$check) {
+            $this->apiResponse($action, $entity, false, $detail, 400);
+        }
+    }
 
     /**
      * Helper xuất phản hồi JSON
