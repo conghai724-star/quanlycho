@@ -34,7 +34,15 @@ class message {
             'method_not_allowed' => "phương thức không được hỗ trợ"
         ];
 
-        $msg = $templates[$type] ?? $type;
+        $msg = $templates[$type] ?? null;
+        
+        // Tự động dịch lỗi thiếu tham số động (Ví dụ: 'missing_trader_code' -> 'thiếu tham số trader_code')
+        if ($msg === null && strpos($type, 'missing_') === 0) {
+            $paramName = substr($type, 8);
+            $msg = "thiếu tham số {$paramName}";
+        }
+        
+        $msg = $msg ?? $type;
         return self::mb_ucfirst($msg);
     }
 
@@ -51,10 +59,13 @@ class message {
 
         $message = "{$actionName} {$entityName} thất bại";
         if (!empty($detail)) {
-            // Nếu chi tiết lỗi khớp với bộ dịch lỗi mẫu
-            $errorDetail = self::$entities[$detail] ?? $detail;
-            if (isset(self::$entities[$detail])) {
+            // Danh sách các khóa lỗi hệ thống cần dịch qua hàm error()
+            $systemErrors = ['not_found', 'missing_id', 'method_not_allowed'];
+            
+            if (in_array($detail, $systemErrors) || strpos($detail, 'missing_') === 0) {
                 $errorDetail = self::error($detail, $entity);
+            } else {
+                $errorDetail = self::$entities[$detail] ?? $detail;
             }
             $message .= ": " . $errorDetail;
         }
