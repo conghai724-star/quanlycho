@@ -13,6 +13,29 @@ class apiController {
     }
 
     /**
+     * Helper xuất phản hồi JSON
+     */
+    protected function response($data, $statusCode = 200) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code($statusCode);
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit();
+    }
+
+    /**
+     * Helper xuất phản hồi JSON định dạng tiếng Việt chuẩn theo hành động
+     */
+    protected function apiResponse($action, $entity, $isSuccess, $detail = '', $statusCode = null) {
+        $code = $statusCode ?? ($isSuccess ? 200 : 400);
+        $message = message::result($action, $entity, $isSuccess, $detail);
+        
+        $this->response([
+            'status'  => $code,
+            'message' => $message
+        ], $code);
+    }
+
+    /**
      * API thống kê doanh thu theo tháng (Phục vụ vẽ biểu đồ Chart.js)
      */
     public function getRevenueData() {
@@ -229,15 +252,7 @@ class apiController {
         }
     }
 
-    protected function apiResponse($action, $entity, $isSuccess, $detail = '', $statusCode = null) {
-        $code = $statusCode ?? ($isSuccess ? 200 : 400);
-        $message = message::result($action, $entity, $isSuccess, $detail);
-        
-        $this->response([
-            'status'  => $code,
-            'message' => $message
-        ], $code);
-    }
+
 //--------------KẾT THÚC QUẢN LÝ TIỂU THƯƠNG--------------//
 //--------------BẮT ĐẦU QUẢN LÝ SẠP CHỢ--------------//
 
@@ -1238,14 +1253,4 @@ class apiController {
 
 
 
-    /**
-     * Helper xuất phản hồi JSON
-     */
-    protected function response($data, $statusCode = 200) {
-        // Thiết lập header trả về JSON
-        header('Content-Type: application/json; charset=utf-8');
-        http_response_code($statusCode);
-        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        exit();
-    }
 }
