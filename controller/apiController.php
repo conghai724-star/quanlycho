@@ -526,6 +526,7 @@ class apiController {
             $contractData = [
                 'trader_id' => $traderId,
                 'stall_id' => $stallId,
+                'name' => 'Hợp đồng thuê sạp ' . $stall['stall_code'],
                 'contract_number' => 'HĐ-GAN-' . date('Ymd') . '-' . rand(100, 999),
                 'start_date' => date('Y-m-d'),
                 'end_date' => date('Y-m-d', strtotime('+1 year')),
