@@ -444,81 +444,14 @@ class apiController {
         $newStallId = $_POST['new_stall_id'];
 
         try {
-            $db = database::getInstance();
-            
             $stallModel = new stallModel();
-            $currentStall = $stallModel->getById($currentStallId);
-            $newStall = $stallModel->getById($newStallId);
-            $this->abort400($currentStall && $newStall, 'update', 'stall', 'Không tìm thấy thông tin sạp.');
+            $message = $stallModel->transferStall($currentStallId, $newStallId);
 
-            // Lấy hợp đồng hoạt động của sạp hiện tại
-            $sqlContract1 = "SELECT * FROM contracts WHERE stall_id = :stall_id AND status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active') LIMIT 1";
-            $contract1 = $db->selectOne($sqlContract1, ['stall_id' => $currentStallId]);
-            $this->abort400($contract1 !== null && $contract1 !== false, 'update', 'stall', 'Không tìm thấy hợp đồng đang hoạt động cho sạp hiện tại.');
-
-            $db->beginTransaction();
-
-            $statusModel = new statusModel();
-            $emptyStatusId = $statusModel->getIdByCode('stall', 'empty');
-            $rentedStatusId = $statusModel->getIdByCode('stall', 'rented');
-
-            // Kiểm tra trạng thái của sạp mới
-            if ($newStall['status'] === 'empty') {
-                // Trường hợp 1: Chuyển sang sạp trống (Đơn phương)
-                $sqlUpdateContract = "UPDATE contracts SET stall_id = :new_stall_id WHERE id = :contract_id";
-                $db->query($sqlUpdateContract, [
-                    'new_stall_id' => $newStallId,
-                    'contract_id'  => $contract1['id']
-                ]);
-
-                $stallModel->updateStatus($currentStallId, $emptyStatusId);
-                $stallModel->updateStatus($newStallId, $rentedStatusId);
-                $message = 'Chuyển đổi sạp thành công!';
-            } else {
-                // Trường hợp 2: Đổi sạp giữa 2 tiểu thương (Cả hai sạp đều đang hoạt động)
-                 $sqlContract2 = "SELECT * FROM contracts WHERE stall_id = :stall_id AND status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active') LIMIT 1";
-                $contract2 = $db->selectOne($sqlContract2, ['stall_id' => $newStallId]);
-                
-                if (!$contract2) {
-                    // Nếu sạp mới không có hợp đồng hoạt động nhưng trạng thái khác empty, vẫn cho phép chuyển đơn phương
-                    $sqlUpdateContract = "UPDATE contracts SET stall_id = :new_stall_id WHERE id = :contract_id";
-                    $db->query($sqlUpdateContract, [
-                        'new_stall_id' => $newStallId,
-                        'contract_id'  => $contract1['id']
-                    ]);
-                    $stallModel->updateStatus($currentStallId, $emptyStatusId);
-                    $stallModel->updateStatus($newStallId, $rentedStatusId);
-                    $message = 'Chuyển đổi sạp sang sạp mới thành công!';
-                } else {
-                    // Thực hiện tráo đổi (swap) stall_id của 2 hợp đồng hoạt động
-                    $sqlUpdateContract1 = "UPDATE contracts SET stall_id = :new_stall_id WHERE id = :contract_id";
-                    $db->query($sqlUpdateContract1, [
-                        'new_stall_id' => $newStallId,
-                        'contract_id'  => $contract1['id']
-                    ]);
-
-                    $sqlUpdateContract2 = "UPDATE contracts SET stall_id = :new_stall_id WHERE id = :contract_id";
-                    $db->query($sqlUpdateContract2, [
-                        'new_stall_id' => $currentStallId,
-                        'contract_id'  => $contract2['id']
-                    ]);
-
-                    // Trạng thái của cả 2 sạp giữ nguyên là 'rented' (đã thuê)
-                    $stallModel->updateStatus($currentStallId, $rentedStatusId);
-                    $stallModel->updateStatus($newStallId, $rentedStatusId);
-                    $message = 'Tráo đổi sạp giữa 2 tiểu thương thành công!';
-                }
-            }
-
-            $db->commit();
             $this->response([
                 'status' => 200,
                 'message' => $message
             ]);
         } catch (Exception $e) {
-            if ($db->inTransaction()) {
-                $db->rollBack();
-            }
             $this->abort500($e, 'update', 'stall');
         }
     }
