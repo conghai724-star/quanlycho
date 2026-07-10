@@ -262,4 +262,12 @@ class contractModel {
         $sql = "SELECT * FROM system_statuses WHERE domain = 'contract' AND code != '99'";
         return $this->db->select($sql);
     }
+
+    /**
+     * Lấy hợp đồng đang hoạt động của một sạp
+     */
+    public function getActiveContractByStall($stallId) {
+        $sql = "SELECT * FROM contracts WHERE stall_id = :stall_id AND status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active') LIMIT 1";
+        return $this->db->selectOne($sql, ['stall_id' => $stallId]);
+    }
 }

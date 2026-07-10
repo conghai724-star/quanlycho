@@ -445,7 +445,15 @@ class apiController {
 
         try {
             $stallModel = new stallModel();
-            $message = $stallModel->transferStall($currentStallId, $newStallId);
+            $currentStall = $stallModel->getById($currentStallId);
+            $newStall = $stallModel->getById($newStallId);
+            $this->abort400($currentStall && $newStall, 'update', 'stall', 'Không tìm thấy thông tin sạp.');
+
+            $contractModel = new contractModel();
+            $contract1 = $contractModel->getActiveContractByStall($currentStallId);
+            $this->abort400($contract1 !== null && $contract1 !== false, 'update', 'stall', 'Không tìm thấy hợp đồng đang hoạt động cho sạp hiện tại.');
+
+            $message = $stallModel->transferStall($currentStall, $newStall, $contract1);
 
             $this->response([
                 'status' => 200,

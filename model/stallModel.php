@@ -197,26 +197,16 @@ class stallModel {
      * Thực hiện chuyển đổi hoặc tráo đổi sạp giữa các tiểu thương
      * Trả về string thông báo kết quả
      */
-    public function transferStall($currentStallId, $newStallId) {
-        $currentStall = $this->getById($currentStallId);
-        $newStall = $this->getById($newStallId);
-        if (!$currentStall || !$newStall) {
-            throw new Exception('Không tìm thấy thông tin sạp.');
-        }
-
-        // Lấy hợp đồng hoạt động của sạp hiện tại
-        $sqlContract1 = "SELECT * FROM contracts WHERE stall_id = :stall_id AND status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active') LIMIT 1";
-        $contract1 = $this->db->selectOne($sqlContract1, ['stall_id' => $currentStallId]);
-        if (!$contract1) {
-            throw new Exception('Không tìm thấy hợp đồng đang hoạt động cho sạp hiện tại.');
-        }
-
+    public function transferStall($currentStall, $newStall, $contract1) {
         try {
             $this->db->beginTransaction();
 
             $statusModel = new statusModel();
             $emptyStatusId = $statusModel->getIdByCode('stall', 'empty');
             $rentedStatusId = $statusModel->getIdByCode('stall', 'rented');
+
+            $currentStallId = $currentStall['id'];
+            $newStallId = $newStall['id'];
 
             // Kiểm tra trạng thái của sạp mới
             if ($newStall['status'] === 'empty') {
