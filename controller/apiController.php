@@ -374,19 +374,8 @@ class apiController {
     public function getAvailableStallsForTransfer() {
         try {
             $excludeId = $_GET['exclude_id'] ?? null;
-            $db = database::getInstance();
-            
-            $sql = "SELECT s.id, s.stall_code, a.area_name, ss.status_name, ss.code AS status_code,
-                           t.fullname AS trader_name
-                    FROM stalls s
-                    LEFT JOIN areas a ON s.area_id = a.id
-                    LEFT JOIN system_statuses ss ON s.status_id = ss.id
-                    LEFT JOIN contracts c ON c.stall_id = s.id AND c.status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active')
-                    LEFT JOIN traders t ON c.trader_id = t.id
-                    WHERE s.id != :exclude_id
-                    ORDER BY a.area_name ASC, s.stall_code ASC";
-            
-            $stalls = $db->select($sql, ['exclude_id' => $excludeId]);
+            $stallModel = new stallModel();
+            $stalls = $stallModel->getAvailableStallsForTransfer($excludeId);
             $this->response($stalls);
         } catch (Exception $e) {
             $this->response(['error' => $e->getMessage()], 500);
@@ -398,12 +387,8 @@ class apiController {
      */
     public function getAvailableTraders() {
         try {
-            $db = database::getInstance();
-            $sql = "SELECT id, fullname, trader_code FROM traders 
-                    WHERE status_id = (SELECT id FROM system_statuses WHERE domain = 'trader' AND code = 'active')
-                      AND id NOT IN (SELECT trader_id FROM contracts WHERE status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active'))
-                    ORDER BY fullname ASC";
-            $traders = $db->select($sql);
+            $traderModel = new traderModel();
+            $traders = $traderModel->getAvailableTraders();
             $this->response($traders);
         } catch (Exception $e) {
             $this->response(['error' => $e->getMessage()], 500);

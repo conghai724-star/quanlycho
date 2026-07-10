@@ -173,4 +173,15 @@ class traderModel {
         $sql = "SELECT * FROM business_lines ORDER BY line_name ASC";
         return $this->db->select($sql);
     }
+
+    /**
+     * Lấy danh sách tiểu thương chưa thuê sạp (khả dụng để gán sạp)
+     */
+    public function getAvailableTraders() {
+        $sql = "SELECT id, fullname, trader_code FROM traders 
+                WHERE status_id = (SELECT id FROM system_statuses WHERE domain = 'trader' AND code = 'active')
+                  AND id NOT IN (SELECT trader_id FROM contracts WHERE status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active'))
+                ORDER BY fullname ASC";
+        return $this->db->select($sql);
+    }
 }

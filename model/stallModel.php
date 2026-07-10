@@ -170,4 +170,26 @@ class stallModel {
         $sql = "SELECT * FROM system_statuses WHERE domain = 'stall'";
         return $this->db->select($sql);
     }
+
+    /**
+     * Lấy danh sách sạp khả dụng để chuyển đổi
+     */
+    public function getAvailableStallsForTransfer($excludeId = null) {
+        $sql = "SELECT s.id, s.stall_code, a.area_name, ss.status_name, ss.code AS status_code,
+                       t.fullname AS trader_name
+                FROM stalls s
+                LEFT JOIN areas a ON s.area_id = a.id
+                LEFT JOIN system_statuses ss ON s.status_id = ss.id
+                LEFT JOIN contracts c ON c.stall_id = s.id AND c.status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active')
+                LEFT JOIN traders t ON c.trader_id = t.id";
+        
+        $params = [];
+        if ($excludeId !== null) {
+            $sql .= " WHERE s.id != :exclude_id";
+            $params['exclude_id'] = $excludeId;
+        }
+
+        $sql .= " ORDER BY a.area_name ASC, s.stall_code ASC";
+        return $this->db->select($sql, $params);
+    }
 }
