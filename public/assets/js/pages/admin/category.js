@@ -1,6 +1,4 @@
-window.App = window.App || {};
-
-App.category = (function () {
+(function () {
     let currentTab = 'area';
 
     function switchTab(tabName) {
@@ -266,10 +264,22 @@ App.category = (function () {
         });
     }
 
-    return {
-        switchTab,
-        openAddModal,
-        openEditModal,
-        deleteItem
-    };
+    function safeRegister() {
+        if (typeof App === 'undefined' || typeof Swal === 'undefined') {
+            setTimeout(safeRegister, 50);
+            return;
+        }
+        App.category = {
+            switchTab,
+            openAddModal,
+            openEditModal,
+            deleteItem
+        };
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', safeRegister);
+    } else {
+        safeRegister();
+    }
 })();
