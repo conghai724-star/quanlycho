@@ -88,6 +88,17 @@ trait httpGuard {
     }
 
     /**
+     * Chặn lỗi 500 Internal Server Error khi có Exception/Throwable
+     * 
+     * @param $e Đối tượng lỗi hoặc Exception bắt được - Lấy từ khối catch
+     * @param $action Hành động xử lý - Khai báo tĩnh
+     * @param $entity Thực thể nghiệp vụ - Khai báo tĩnh
+     */
+    protected function abort500(\Throwable $e, string $action, string $entity) {
+        $this->httpAbortResponse($action, $entity, false, $e->getMessage(), 500);
+    }
+
+    /**
      * Phản hồi lỗi HTTP tập trung (Tự động phát hiện apiResponse của dự án hoặc xuất JSON lỗi mặc định)
      * 
      * @param $action Hành động xử lý - Lấy từ hàm abort truyền sang

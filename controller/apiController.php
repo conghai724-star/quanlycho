@@ -81,7 +81,7 @@ class apiController {
             $traderModel->deleteTrader($id);
             $this->apiResponse('delete', 'trader', true);
         } catch (Exception $e) {
-            $this->apiResponse('delete', 'trader', false, $e->getMessage(), 500);
+            $this->abort500($e, 'delete', 'trader');
         }
     }
 
@@ -149,7 +149,7 @@ class apiController {
             $traderModel->createTrader($data);
             $this->apiResponse('create', 'trader', true);
         } catch (Exception $e) {
-            $this->apiResponse('create', 'trader', false, $e->getMessage(), 500);
+            $this->abort500($e, 'create', 'trader');
         }
     }
 
@@ -225,7 +225,7 @@ class apiController {
             $traderModel->updateTrader($id, $data);
             $this->apiResponse('update', 'trader', true);
         } catch (Exception $e) {
-            $this->apiResponse('update', 'trader', false, $e->getMessage(), 500);
+            $this->abort500($e, 'update', 'trader');
         }
     }
 
