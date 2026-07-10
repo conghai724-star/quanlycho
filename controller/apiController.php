@@ -572,12 +572,10 @@ class apiController {
         $this->abort400(strtotime($data['start_date']) <= strtotime($data['end_date']), 'create', 'contract', 'Ngày bắt đầu không được lớn hơn ngày kết thúc.');
 
         try {
-            $db = database::getInstance();
             $contractModel = new contractModel();
             
             // Kiểm tra trùng số hợp đồng
-            $checkNum = $db->selectOne("SELECT COUNT(*) as count FROM contracts WHERE contract_number = :num AND status_id != (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = '99')", ['num' => $data['contract_number']]);
-            $this->abort400(($checkNum['count'] ?? 0) == 0, 'create', 'contract', 'Số hợp đồng này đã tồn tại trên hệ thống.');
+            $this->abort400(!$contractModel->isContractNumberExists($data['contract_number']), 'create', 'contract', 'Số hợp đồng này đã tồn tại trên hệ thống.');
 
             // Kiểm tra xem sạp có đang trống hay không
             $stallModel = new stallModel();
@@ -708,10 +706,9 @@ class apiController {
         $this->abort400($validator, 'create', 'appendix');
 
         try {
-            $db = database::getInstance();
+            $contractModel = new contractModel();
             // Kiểm tra trùng số phụ lục
-            $checkNum = $db->selectOne("SELECT COUNT(*) as count FROM contract_appendices WHERE appendix_number = :num", ['num' => $data['appendix_number']]);
-            $this->abort400(($checkNum['count'] ?? 0) == 0, 'create', 'appendix', 'Số phụ lục này đã tồn tại trên hệ thống.');
+            $this->abort400(!$contractModel->isAppendixNumberExists($data['appendix_number']), 'create', 'appendix', 'Số phụ lục này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file phụ lục (nếu có)
             if (isset($_FILES['appendix_file']) && $_FILES['appendix_file']['error'] !== UPLOAD_ERR_NO_FILE) {
@@ -721,7 +718,6 @@ class apiController {
                 $data['file'] = $savedFile;
             }
 
-            $contractModel = new contractModel();
             $contractModel->addAppendix($data);
             $this->apiResponse('create', 'appendix', true);
         } catch (Exception $e) {

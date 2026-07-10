@@ -270,4 +270,32 @@ class contractModel {
         $sql = "SELECT * FROM contracts WHERE stall_id = :stall_id AND status_id = (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = 'active') LIMIT 1";
         return $this->db->selectOne($sql, ['stall_id' => $stallId]);
     }
+
+    /**
+     * Kiểm tra xem số hợp đồng đã tồn tại chưa
+     */
+    public function isContractNumberExists($num, $excludeId = null) {
+        $sql = "SELECT COUNT(*) as count FROM contracts WHERE contract_number = :num AND status_id != (SELECT id FROM system_statuses WHERE domain = 'contract' AND code = '99')";
+        $params = ['num' => $num];
+        if ($excludeId !== null) {
+            $sql .= " AND id != :excludeId";
+            $params['excludeId'] = $excludeId;
+        }
+        $res = $this->db->selectOne($sql, $params);
+        return ($res['count'] ?? 0) > 0;
+    }
+
+    /**
+     * Kiểm tra xem số phụ lục đã tồn tại chưa
+     */
+    public function isAppendixNumberExists($num, $excludeId = null) {
+        $sql = "SELECT COUNT(*) as count FROM contract_appendices WHERE appendix_number = :num";
+        $params = ['num' => $num];
+        if ($excludeId !== null) {
+            $sql .= " AND id != :excludeId";
+            $params['excludeId'] = $excludeId;
+        }
+        $res = $this->db->selectOne($sql, $params);
+        return ($res['count'] ?? 0) > 0;
+    }
 }
