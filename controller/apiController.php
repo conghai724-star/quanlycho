@@ -146,27 +146,7 @@ class apiController {
             $this->abort400(!$traderModel->isCccdExists($data['cccd']), 'create', 'trader', 'Số CCCD đã tồn tại trên hệ thống');
 
             // Xử lý upload nhiều tài liệu đính kèm (nếu có)
-            $uploadedFiles = [];
-            if (isset($_FILES['license_files'])) {
-                $files = $_FILES['license_files'];
-                $fileCount = is_array($files['name']) ? count($files['name']) : 0;
-                for ($i = 0; $i < $fileCount; $i++) {
-                    if ($files['error'][$i] === UPLOAD_ERR_NO_FILE) {
-                        continue;
-                    }
-                    $_FILES['temp_upload_file'] = [
-                        'name'     => $files['name'][$i],
-                        'type'     => $files['type'][$i],
-                        'tmp_name' => $files['tmp_name'][$i],
-                        'error'    => $files['error'][$i],
-                        'size'     => $files['size'][$i]
-                    ];
-                    $uploader = new upload('traders', ['jpg', 'jpeg', 'png', 'pdf'], 10);
-                    $savedFile = $uploader->save('temp_upload_file');
-                    $this->abort400($savedFile !== false, 'create', 'trader', "Lỗi file '" . $files['name'][$i] . "': " . reset($uploader->getErrors()));
-                    $uploadedFiles[] = $savedFile;
-                }
-            }
+            $uploadedFiles = $this->uploadMultipleFiles('license_files', 'traders', ['jpg', 'jpeg', 'png', 'pdf'], 10, 'create', 'trader');
             $data['license_file'] = !empty($uploadedFiles) ? json_encode($uploadedFiles) : null;
 
             $traderModel->createTrader($data);
@@ -221,27 +201,7 @@ class apiController {
             $existingFiles = array_intersect($existingFiles, $keptFiles);
 
             // Xử lý upload các file mới
-            $uploadedFiles = [];
-            if (isset($_FILES['license_files'])) {
-                $files = $_FILES['license_files'];
-                $fileCount = is_array($files['name']) ? count($files['name']) : 0;
-                for ($i = 0; $i < $fileCount; $i++) {
-                    if ($files['error'][$i] === UPLOAD_ERR_NO_FILE) {
-                        continue;
-                    }
-                    $_FILES['temp_upload_file'] = [
-                        'name'     => $files['name'][$i],
-                        'type'     => $files['type'][$i],
-                        'tmp_name' => $files['tmp_name'][$i],
-                        'error'    => $files['error'][$i],
-                        'size'     => $files['size'][$i]
-                    ];
-                    $uploader = new upload('traders', ['jpg', 'jpeg', 'png', 'pdf'], 10);
-                    $savedFile = $uploader->save('temp_upload_file');
-                    $this->abort400($savedFile !== false, 'update', 'trader', "Lỗi file '" . $files['name'][$i] . "': " . reset($uploader->getErrors()));
-                    $uploadedFiles[] = $savedFile;
-                }
-            }
+            $uploadedFiles = $this->uploadMultipleFiles('license_files', 'traders', ['jpg', 'jpeg', 'png', 'pdf'], 10, 'update', 'trader');
             $finalFiles = array_merge($existingFiles, $uploadedFiles);
             $data['license_file'] = !empty($finalFiles) ? json_encode(array_values($finalFiles)) : null;
 

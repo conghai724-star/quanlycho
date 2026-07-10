@@ -99,6 +99,63 @@ trait httpGuard {
     }
 
     /**
+     * Upload nhiều file từ một input file (HTML multiple upload) với tự động kiểm tra lỗi qua abort400
+     * 
+     * @param $inputName Tên của input file trong $_FILES (Ví dụ: 'license_files')
+     * @param $folder Thư mục upload đích (Ví dụ: 'traders')
+     * @param $allowedExtensions Mảng định dạng cho phép (Mặc định: ['jpg', 'jpeg', 'png', 'pdf'])
+     * @param $maxSizeMb Dung lượng tối đa mỗi file tính bằng MB (Mặc định: 10)
+     * @param $action Hành động xử lý để báo lỗi (Ví dụ: 'create', 'update')
+     * @param $entity Thực thể để báo lỗi (Ví dụ: 'trader')
+     * @return array Danh sách tên các file đã upload thành công
+     */
+    protected function uploadMultipleFiles(
+        string $inputName, 
+        string $folder, 
+        array $allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'], 
+        int $maxSizeMb = 10,
+        string $action = 'create',
+        string $entity = 'trader'
+    ): array {
+        $uploadedFiles = [];
+        if (isset($_FILES[$inputName])) {
+            $files = $_FILES[$inputName];
+            $fileCount = is_array($files['name']) ? count($files['name']) : 0;
+            for ($i = 0; $i < $fileCount; $i++) {
+                if ($files['error'][$i] === UPLOAD_ERR_NO_FILE) {
+                    continue;
+                }
+                
+                // Giả lập biến $_FILES tạm thời cho lớp upload xử lý
+                $_FILES['temp_upload_file'] = [
+                    'name'     => $files['name'][$i],
+                    'type'     => $files['type'][$i],
+                    'tmp_name' => $files['tmp_name'][$i],
+                    'error'    => $files['error'][$i],
+                    'size'     => $files['size'][$i]
+                ];
+                
+                $uploader = new upload($folder, $allowedExtensions, $maxSizeMb);
+                $savedFile = $uploader->save('temp_upload_file');
+                
+                // Tự động chặn lỗi 400 nếu lưu file thất bại
+                $this->abort400(
+                    $savedFile !== false, 
+                    $action, 
+                    $entity, 
+                    "Lỗi file '" . $files['name'][$i] . "': " . reset($uploader->getErrors())
+                );
+                
+                $uploadedFiles[] = $savedFile;
+            }
+            
+            // Dọn dẹp biến tạm
+            unset($_FILES['temp_upload_file']);
+        }
+        return $uploadedFiles;
+    }
+
+    /**
      * Phản hồi lỗi HTTP tập trung (Tự động phát hiện apiResponse của dự án hoặc xuất JSON lỗi mặc định)
      * 
      * @param $action Hành động xử lý - Lấy từ hàm abort truyền sang
