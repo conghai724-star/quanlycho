@@ -1014,7 +1014,9 @@ class apiController {
         try {
             $categoryModel = new categoryModel();
             $item = $categoryModel->getItemById($type, $id);
-            $this->abort404($item, 'getItemById', $id, 'view', 'category', 'Không tìm thấy danh mục yêu cầu.');
+            if (!$item) {
+                $this->httpAbortResponse('view', 'category', false, 'not_found', 404);
+            }
 
             $this->response([
                 'status' => 200,
@@ -1115,7 +1117,9 @@ class apiController {
 
         // Kiểm tra tồn tại
         $item = $categoryModel->getItemById($type, $id);
-        $this->abort404($item, 'getItemById', $id, 'update', 'category', 'Danh mục không tồn tại.');
+        if (!$item) {
+            $this->httpAbortResponse('update', 'category', false, 'not_found', 404);
+        }
 
         try {
             $data = [];
@@ -1195,7 +1199,9 @@ class apiController {
 
         // Kiểm tra tồn tại
         $item = $categoryModel->getItemById($type, $id);
-        $this->abort404($item, 'getItemById', $id, 'delete', 'category', 'Danh mục không tồn tại.');
+        if (!$item) {
+            $this->httpAbortResponse('delete', 'category', false, 'not_found', 404);
+        }
 
         try {
             $categoryModel->deleteItem($type, $id);
