@@ -175,61 +175,30 @@
             .catch(() => App.alert.connectionError());
     }
 
-    function deleteItem(type, id, name) {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
-        Swal.fire({
-            title: 'Xác nhận xóa?',
-            text: `Bạn có chắc chắn muốn xóa danh mục "${name}"? Thao tác này không thể hoàn tác.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Đồng ý xóa',
-            cancelButtonText: 'Hủy bỏ',
-            confirmButtonColor: '#EA4335',
-            cancelButtonColor: '#a0aec0',
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623'
-        }).then(result => {
-            if (result.isConfirmed) {
-                const fd = new FormData();
-                fd.append('id', id);
-                fd.append('type', type);
-                fd.append('csrf_token', window.CSRF_TOKEN);
-
-                App.utils.apiPost(window.BASE_URL + 'api/deleteCategory', fd, {
-                    onSuccess: () => location.reload()
-                });
-            }
-        });
-    }
-
-    function initForms() {
-        ['area', 'stall_type', 'business_line', 'document_type'].forEach(type => {
-            const form = document.getElementById(`form-add-${type}`);
-            if (form) {
-                form.addEventListener('submit', e => {
-                    e.preventDefault();
-                    if (!form.checkValidity()) { form.reportValidity(); return; }
-
-                    App.utils.apiPost(form.action, new FormData(form), {
-                        onSuccess: () => location.reload()
-                    });
-                });
-            }
-        });
-    }
-
     function safeRegister() {
         if (typeof App === 'undefined' || typeof Swal === 'undefined') {
             setTimeout(safeRegister, 50);
             return;
         }
+
         App.category = {
             switchTab,
-            openEditModal,
-            deleteItem
+            openEditModal
         };
-        initForms();
+
+        // 1. Đăng ký tự động thêm mới bằng hàm dùng chung handleFormSubmit
+        ['area', 'stall_type', 'business_line', 'document_type'].forEach(type => {
+            App.utils.handleFormSubmit(`form-add-${type}`, window.location.href);
+        });
+
+        // 2. Đăng ký tự động xóa bằng hàm dùng chung initDelete
+        App.utils.initDelete({
+            btnClass:  'btn-open-delete-cat',
+            idAttr:    'catId',
+            nameAttr:  'catName',
+            label:     'danh mục',
+            onSuccess: () => location.reload()
+        });
     }
 
     if (document.readyState === 'loading') {

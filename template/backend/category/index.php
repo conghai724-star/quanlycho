@@ -66,7 +66,11 @@
                                             <button type="button" class="btn btn-outline btn-sm" onclick="App.category.openEditModal('area', <?php echo $item['id']; ?>)" style="padding: 4px 8px; font-size: 11px;" title="Sửa">
                                                 <i class="fa-solid fa-pen"></i>
                                             </button>
-                                            <button type="button" class="btn btn-outline btn-sm text-danger" onclick="App.category.deleteItem('area', <?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['area_name']); ?>')" style="padding: 4px 8px; font-size: 11px;" title="Xóa">
+                                            <button type="button" class="btn btn-outline btn-sm text-danger btn-open-delete-cat" 
+                                                    data-cat-id="<?php echo $item['id']; ?>" 
+                                                    data-cat-name="<?php echo htmlspecialchars($item['area_name']); ?>" 
+                                                    data-url="<?php echo BASE_URL; ?>api/deleteCategory?type=area" 
+                                                    style="padding: 4px 8px; font-size: 11px;" title="Xóa">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </div>
@@ -137,7 +141,11 @@
                                             <button type="button" class="btn btn-outline btn-sm" onclick="App.category.openEditModal('stall_type', <?php echo $item['id']; ?>)" style="padding: 4px 8px; font-size: 11px;" title="Sửa">
                                                 <i class="fa-solid fa-pen"></i>
                                             </button>
-                                            <button type="button" class="btn btn-outline btn-sm text-danger" onclick="App.category.deleteItem('stall_type', <?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['type_name']); ?>')" style="padding: 4px 8px; font-size: 11px;" title="Xóa">
+                                            <button type="button" class="btn btn-outline btn-sm text-danger btn-open-delete-cat" 
+                                                    data-cat-id="<?php echo $item['id']; ?>" 
+                                                    data-cat-name="<?php echo htmlspecialchars($item['type_name']); ?>" 
+                                                    data-url="<?php echo BASE_URL; ?>api/deleteCategory?type=stall_type" 
+                                                    style="padding: 4px 8px; font-size: 11px;" title="Xóa">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </div>
@@ -208,7 +216,11 @@
                                             <button type="button" class="btn btn-outline btn-sm" onclick="App.category.openEditModal('business_line', <?php echo $item['id']; ?>)" style="padding: 4px 8px; font-size: 11px;" title="Sửa">
                                                 <i class="fa-solid fa-pen"></i>
                                             </button>
-                                            <button type="button" class="btn btn-outline btn-sm text-danger" onclick="App.category.deleteItem('business_line', <?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['line_name']); ?>')" style="padding: 4px 8px; font-size: 11px;" title="Xóa">
+                                            <button type="button" class="btn btn-outline btn-sm text-danger btn-open-delete-cat" 
+                                                    data-cat-id="<?php echo $item['id']; ?>" 
+                                                    data-cat-name="<?php echo htmlspecialchars($item['line_name']); ?>" 
+                                                    data-url="<?php echo BASE_URL; ?>api/deleteCategory?type=business_line" 
+                                                    style="padding: 4px 8px; font-size: 11px;" title="Xóa">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </div>
@@ -279,7 +291,11 @@
                                             <button type="button" class="btn btn-outline btn-sm" onclick="App.category.openEditModal('document_type', <?php echo $item['id']; ?>)" style="padding: 4px 8px; font-size: 11px;" title="Sửa">
                                                 <i class="fa-solid fa-pen"></i>
                                             </button>
-                                            <button type="button" class="btn btn-outline btn-sm text-danger" onclick="App.category.deleteItem('document_type', <?php echo $item['id']; ?>, '<?php echo htmlspecialchars($item['type_name']); ?>')" style="padding: 4px 8px; font-size: 11px;" title="Xóa">
+                                            <button type="button" class="btn btn-outline btn-sm text-danger btn-open-delete-cat" 
+                                                    data-cat-id="<?php echo $item['id']; ?>" 
+                                                    data-cat-name="<?php echo htmlspecialchars($item['type_name']); ?>" 
+                                                    data-url="<?php echo BASE_URL; ?>api/deleteCategory?type=document_type" 
+                                                    style="padding: 4px 8px; font-size: 11px;" title="Xóa">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </div>

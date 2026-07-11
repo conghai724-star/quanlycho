@@ -1193,8 +1193,8 @@ class apiController {
         $this->abort405('POST', 'delete', 'category');
         $this->abort400(['id', 'type'], 'delete', 'category', 'Thiếu thông tin danh mục cần xóa.');
 
-        $id = $_POST['id'];
-        $type = $_POST['type'];
+        $id = $_POST['id'] ?? $_GET['id'] ?? '';
+        $type = $_POST['type'] ?? $_GET['type'] ?? '';
         $categoryModel = new categoryModel();
 
         // Kiểm tra tồn tại
