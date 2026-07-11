@@ -13,6 +13,14 @@ class router {
 
         $url = $this->parseUrl();
 
+        // Chặn các yêu cầu tệp tĩnh không tồn tại để tránh gây lỗi 500 router
+        if (isset($url[0]) && in_array($url[0], ['public', 'uploads', 'assets'])) {
+            header("HTTP/1.1 404 Not Found");
+            echo "<h1>404 Not Found</h1>";
+            echo "<p>Static resource not found.</p>";
+            exit();
+        }
+
         // 1. Xác định Controller (mặc định là homeController)
         if (isset($url[0]) && !empty($url[0])) {
             $controllerName = $url[0] . 'Controller';
