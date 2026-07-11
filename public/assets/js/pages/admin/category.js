@@ -19,7 +19,6 @@
     }
 
     function getModalFields(type, data = null) {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         let html = '';
         let title = data ? 'Cập Nhật Danh Mục' : 'Thêm Danh Mục Mới';
 
@@ -86,8 +85,7 @@
                 <div style="text-align: left; font-size: 13px;">
                     <div class="form-group" style="margin-bottom: 12px;">
                         <label class="form-label" style="font-weight: 500;">${codeLabel} <span style="color: var(--red)">*</span></label>
-                        <input type="text" id="swal-code" class="form-control" placeholder="${codePlaceholder}" value="${codeVal}" ${data ? 'readonly style="background-color: var(--bg-surface-secondary);"' : ''} required>
-                        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">Mã viết liền không dấu, viết thường, không khoảng trắng.</small>
+                        <input type="text" id="swal-code" class="form-control" placeholder="${codePlaceholder}" value="${codeVal}" readonly style="background-color: var(--bg-surface-secondary);" required>
                     </div>
                     <div class="form-group" style="margin-bottom: 12px;">
                         <label class="form-label" style="font-weight: 500;">${nameLabel} <span style="color: var(--red)">*</span></label>
@@ -102,65 +100,6 @@
         }
 
         return { title, html };
-    }
-
-    function openAddModal() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const { title, html } = getModalFields(currentTab);
-
-        Swal.fire({
-            title: title,
-            html: html,
-            showCancelButton: true,
-            confirmButtonText: 'Lưu lại',
-            cancelButtonText: 'Hủy bỏ',
-            confirmButtonColor: '#1ABB9C',
-            cancelButtonColor: '#a0aec0',
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0f1623',
-            preConfirm: () => {
-                const fd = new FormData();
-                fd.append('type', currentTab);
-                fd.append('csrf_token', window.CSRF_TOKEN);
-
-                if (currentTab === 'area') {
-                    const areaName = document.getElementById('swal-area_name').value.trim();
-                    if (!areaName) {
-                        Swal.showValidationMessage('Tên khu vực không được để trống.');
-                        return false;
-                    }
-                    fd.append('area_name', areaName);
-                    fd.append('block', document.getElementById('swal-block').value.trim());
-                    fd.append('lot', document.getElementById('swal-lot').value.trim());
-                    fd.append('description', document.getElementById('swal-description').value.trim());
-                } else {
-                    const code = document.getElementById('swal-code').value.trim();
-                    const name = document.getElementById('swal-name').value.trim();
-                    if (!code || !name) {
-                        Swal.showValidationMessage('Vui lòng nhập đầy đủ thông tin bắt buộc.');
-                        return false;
-                    }
-                    if (currentTab === 'stall_type') {
-                        fd.append('type_code', code);
-                        fd.append('type_name', name);
-                    } else if (currentTab === 'business_line') {
-                        fd.append('line_code', code);
-                        fd.append('line_name', name);
-                    } else if (currentTab === 'document_type') {
-                        fd.append('type_code', code);
-                        fd.append('type_name', name);
-                    }
-                    fd.append('description', document.getElementById('swal-description').value.trim());
-                }
-                return fd;
-            }
-        }).then(result => {
-            if (result.isConfirmed && result.value) {
-                App.utils.apiPost(window.BASE_URL + 'api/addCategory', result.value, {
-                    onSuccess: () => location.reload()
-                });
-            }
-        });
     }
 
     function openEditModal(type, id) {
@@ -264,6 +203,22 @@
         });
     }
 
+    function initForms() {
+        ['area', 'stall_type', 'business_line', 'document_type'].forEach(type => {
+            const form = document.getElementById(`form-add-${type}`);
+            if (form) {
+                form.addEventListener('submit', e => {
+                    e.preventDefault();
+                    if (!form.checkValidity()) { form.reportValidity(); return; }
+
+                    App.utils.apiPost(form.action, new FormData(form), {
+                        onSuccess: () => location.reload()
+                    });
+                });
+            }
+        });
+    }
+
     function safeRegister() {
         if (typeof App === 'undefined' || typeof Swal === 'undefined') {
             setTimeout(safeRegister, 50);
@@ -271,10 +226,10 @@
         }
         App.category = {
             switchTab,
-            openAddModal,
             openEditModal,
             deleteItem
         };
+        initForms();
     }
 
     if (document.readyState === 'loading') {
