@@ -2,15 +2,33 @@
 /**
  * Controller xử lý các yêu cầu AJAX / API trả về dữ liệu JSON
  */
-class apiController {
-    use httpGuard;
+class apiController extends baseController {
 
     public function __construct() {
+        // Một số API công khai cho phép khách vãng lai truy cập (Sơ đồ cây sạp chợ)
+        $publicActions = ['getStallTree', 'getStallDetails', 'changeMarketScope'];
+        
+        $url = $_GET['url'] ?? '';
+        $parts = explode('/', rtrim($url, '/'));
+        $action = $parts[1] ?? 'index';
+
+        if (in_array($action, $publicActions)) {
+            return;
+        }
+
         // Chỉ cho phép truy cập API khi đã đăng nhập với quyền admin (user_group = 1)
         if (!session::isLoggedIn() || session::get('user_group') != 1) {
             $this->response(['error' => 'Bạn không có quyền thực hiện hành động này.'], 403);
         }
     }
+
+    /**
+     * Phương thức index bắt buộc của baseController
+     */
+    public function index() {
+        $this->response(['error' => 'API Endpoint not found.'], 404);
+    }
+
 
     /**
      * Helper xuất phản hồi JSON
@@ -22,18 +40,6 @@ class apiController {
         exit();
     }
 
-    /**
-     * Helper xuất phản hồi JSON định dạng tiếng Việt chuẩn theo hành động
-     */
-    protected function apiResponse($action, $entity, $isSuccess, $detail = '', $statusCode = null) {
-        $code = $statusCode ?? ($isSuccess ? 200 : 400);
-        $message = message::result($action, $entity, $isSuccess, $detail);
-        
-        $this->response([
-            'status'  => $code,
-            'message' => $message
-        ], $code);
-    }
 
     /**
      * API thống kê doanh thu theo tháng (Phục vụ vẽ biểu đồ Chart.js)
@@ -92,19 +98,19 @@ class apiController {
      * API xóa tiểu thương (AJAX POST)
      */
     public function deleteTrader() {
-        $this->abort405('POST', 'delete', 'trader');
-        $this->abort400('id', 'delete', 'trader');
+        $this->func->abort405('POST', 'delete', 'trader');
+        $this->func->abort400('id', 'delete', 'trader');
 
         $id = $_POST['id'];
 
         try {
             $traderModel = new traderModel();
-            $trader = $this->abort404($traderModel, 'getTraderById', $id, 'delete', 'trader');
+            $trader = $this->func->abort404($traderModel, 'getTraderById', $id, 'delete', 'trader');
 
             $traderModel->deleteTrader($id);
-            $this->apiResponse('delete', 'trader', true);
+            $this->func->apiResponse('delete', 'trader', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'delete', 'trader');
+            $this->func->abort500($e, 'delete', 'trader');
         }
     }
 
@@ -115,7 +121,7 @@ class apiController {
      * API thêm tiểu thương mới (AJAX POST)
      */
     public function addTrader() {
-        $this->abort405('POST', 'create', 'trader');
+        $this->func->abort405('POST', 'create', 'trader');
 
         $data = [
             'trader_code'      => $_POST['trader_code'] ?? '',
@@ -136,23 +142,23 @@ class apiController {
                   ->phone('phone', $data['phone'], 'Số điện thoại không đúng định dạng Việt Nam.')
                   ->required('cccd', $data['cccd'], 'Số CCCD không được để trống.');
 
-        $this->abort400($validator, 'create', 'trader');
+        $this->func->abort400($validator, 'create', 'trader');
 
         try {
             $traderModel = new traderModel();
             
             // Kiểm tra trùng lặp
-            $this->abort400(!$traderModel->isTraderCodeExists($data['trader_code']), 'create', 'trader', 'Mã tiểu thương đã tồn tại trên hệ thống');
-            $this->abort400(!$traderModel->isCccdExists($data['cccd']), 'create', 'trader', 'Số CCCD đã tồn tại trên hệ thống');
+            $this->func->abort400(!$traderModel->isTraderCodeExists($data['trader_code']), 'create', 'trader', 'Mã tiểu thương đã tồn tại trên hệ thống');
+            $this->func->abort400(!$traderModel->isCccdExists($data['cccd']), 'create', 'trader', 'Số CCCD đã tồn tại trên hệ thống');
 
             // Xử lý upload nhiều tài liệu đính kèm (nếu có)
-            $uploadedFiles = $this->uploadMultipleFiles('license_files', 'traders', ['jpg', 'jpeg', 'png', 'pdf'], 10, 'create', 'trader');
+            $uploadedFiles = $this->func->uploadMultipleFiles('license_files', 'traders', ['jpg', 'jpeg', 'png', 'pdf'], 10, 'create', 'trader');
             $data['license_file'] = !empty($uploadedFiles) ? json_encode($uploadedFiles) : null;
 
             $traderModel->createTrader($data);
-            $this->apiResponse('create', 'trader', true);
+            $this->func->apiResponse('create', 'trader', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'create', 'trader');
+            $this->func->abort500($e, 'create', 'trader');
         }
     }
 
@@ -160,8 +166,8 @@ class apiController {
      * API sửa thông tin tiểu thương (AJAX POST)
      */
     public function editTrader() {
-        $this->abort405('POST', 'update', 'trader');
-        $this->abort400('id', 'update', 'trader');
+        $this->func->abort405('POST', 'update', 'trader');
+        $this->func->abort400('id', 'update', 'trader');
 
         $id = $_POST['id'];
 
@@ -182,14 +188,14 @@ class apiController {
                   ->phone('phone', $data['phone'], 'Số điện thoại không đúng định dạng Việt Nam.')
                   ->required('cccd', $data['cccd'], 'Số CCCD không được để trống.');
 
-        $this->abort400($validator, 'update', 'trader');
+        $this->func->abort400($validator, 'update', 'trader');
 
         try {
             $traderModel = new traderModel();
-            $trader = $this->abort404($traderModel, 'getTraderById', $id, 'update', 'trader');
+            $trader = $this->func->abort404($traderModel, 'getTraderById', $id, 'update', 'trader');
 
             // Kiểm tra trùng lặp số CCCD (loại trừ bản ghi hiện tại)
-            $this->abort400(!$traderModel->isCccdExists($data['cccd'], $id), 'update', 'trader', 'Số CCCD đã tồn tại trên hệ thống');
+            $this->func->abort400(!$traderModel->isCccdExists($data['cccd'], $id), 'update', 'trader', 'Số CCCD đã tồn tại trên hệ thống');
 
             // Xử lý các file cũ còn lại sau khi người dùng xóa bớt trên giao diện
             $existingFiles = [];
@@ -201,14 +207,14 @@ class apiController {
             $existingFiles = array_intersect($existingFiles, $keptFiles);
 
             // Xử lý upload các file mới
-            $uploadedFiles = $this->uploadMultipleFiles('license_files', 'traders', ['jpg', 'jpeg', 'png', 'pdf'], 10, 'update', 'trader');
+            $uploadedFiles = $this->func->uploadMultipleFiles('license_files', 'traders', ['jpg', 'jpeg', 'png', 'pdf'], 10, 'update', 'trader');
             $finalFiles = array_merge($existingFiles, $uploadedFiles);
             $data['license_file'] = !empty($finalFiles) ? json_encode(array_values($finalFiles)) : null;
 
             $traderModel->updateTrader($id, $data);
-            $this->apiResponse('update', 'trader', true);
+            $this->func->apiResponse('update', 'trader', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'update', 'trader');
+            $this->func->abort500($e, 'update', 'trader');
         }
     }
 
@@ -256,7 +262,7 @@ class apiController {
      * API thêm sạp mới (AJAX POST)
      */
     public function addStall() {
-        $this->abort405('POST', 'create', 'stall');
+        $this->func->abort405('POST', 'create', 'stall');
 
         $data = [
             'area_id'       => $_POST['area_id'] ?? '',
@@ -278,16 +284,16 @@ class apiController {
                   ->numeric('base_price', $data['base_price'], 'Đơn giá thuê phải là dạng số.')
                   ->min('base_price', $data['base_price'], 0, 'Đơn giá thuê không được âm.');
 
-        $this->abort400($validator, 'create', 'stall');
+        $this->func->abort400($validator, 'create', 'stall');
 
         try {
             $stallModel = new stallModel();
-            $this->abort400(!$stallModel->isStallCodeExists($data['stall_code']), 'create', 'stall', 'Mã sạp đã tồn tại trên hệ thống');
+            $this->func->abort400(!$stallModel->isStallCodeExists($data['stall_code']), 'create', 'stall', 'Mã sạp đã tồn tại trên hệ thống');
 
             $stallModel->create($data);
-            $this->apiResponse('create', 'stall', true);
+            $this->func->apiResponse('create', 'stall', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'create', 'stall');
+            $this->func->abort500($e, 'create', 'stall');
         }
     }
 
@@ -295,8 +301,8 @@ class apiController {
      * API cập nhật sạp (AJAX POST)
      */
     public function editStall() {
-        $this->abort405('POST', 'update', 'stall');
-        $this->abort400('id', 'update', 'stall');
+        $this->func->abort405('POST', 'update', 'stall');
+        $this->func->abort400('id', 'update', 'stall');
 
         $id = $_POST['id'];
 
@@ -320,18 +326,18 @@ class apiController {
                   ->numeric('base_price', $data['base_price'], 'Đơn giá thuê phải là dạng số.')
                   ->min('base_price', $data['base_price'], 0, 'Đơn giá thuê không được âm.');
 
-        $this->abort400($validator, 'update', 'stall');
+        $this->func->abort400($validator, 'update', 'stall');
 
         try {
             $stallModel = new stallModel();
-            $this->abort404($stallModel, 'getById', $id, 'update', 'stall');
+            $this->func->abort404($stallModel, 'getById', $id, 'update', 'stall');
 
-            $this->abort400(!$stallModel->isStallCodeExists($data['stall_code'], $id), 'update', 'stall', 'Mã sạp đã tồn tại trên hệ thống');
+            $this->func->abort400(!$stallModel->isStallCodeExists($data['stall_code'], $id), 'update', 'stall', 'Mã sạp đã tồn tại trên hệ thống');
 
             $stallModel->update($id, $data);
-            $this->apiResponse('update', 'stall', true);
+            $this->func->apiResponse('update', 'stall', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'update', 'stall');
+            $this->func->abort500($e, 'update', 'stall');
         }
     }
 
@@ -339,21 +345,21 @@ class apiController {
      * API xóa sạp (AJAX POST)
      */
     public function deleteStall() {
-        $this->abort405('POST', 'delete', 'stall');
-        $this->abort400('id', 'delete', 'stall');
+        $this->func->abort405('POST', 'delete', 'stall');
+        $this->func->abort400('id', 'delete', 'stall');
 
         $id = $_POST['id'];
 
         try {
             $stallModel = new stallModel();
-            $this->abort404($stallModel, 'getById', $id, 'delete', 'stall');
+            $this->func->abort404($stallModel, 'getById', $id, 'delete', 'stall');
 
-            $this->abort400(!$stallModel->hasActiveContract($id), 'delete', 'stall', 'Sạp đang có hợp đồng hoạt động, không thể xóa.');
+            $this->func->abort400(!$stallModel->hasActiveContract($id), 'delete', 'stall', 'Sạp đang có hợp đồng hoạt động, không thể xóa.');
 
             $stallModel->delete($id);
-            $this->apiResponse('delete', 'stall', true);
+            $this->func->apiResponse('delete', 'stall', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'delete', 'stall');
+            $this->func->abort500($e, 'delete', 'stall');
         }
     }
 
@@ -401,8 +407,8 @@ class apiController {
      * API gán sạp nhanh cho tiểu thương (AJAX POST)
      */
     public function assignStall() {
-        $this->abort405('POST', 'create', 'contract');
-        $this->abort400(['stall_id', 'trader_id'], 'create', 'contract', 'Vui lòng chọn đầy đủ sạp và tiểu thương.');
+        $this->func->abort405('POST', 'create', 'contract');
+        $this->func->abort400(['stall_id', 'trader_id'], 'create', 'contract', 'Vui lòng chọn đầy đủ sạp và tiểu thương.');
 
         $stallId = $_POST['stall_id'];
         $traderId = $_POST['trader_id'];
@@ -410,7 +416,7 @@ class apiController {
         try {
             $stallModel = new stallModel();
             $stall = $stallModel->getById($stallId);
-            $this->abort400($stall && $stall['status'] === 'empty', 'create', 'contract', 'Sạp này không còn trống để cho thuê.');
+            $this->func->abort400($stall && $stall['status'] === 'empty', 'create', 'contract', 'Sạp này không còn trống để cho thuê.');
 
             $contractModel = new contractModel();
             $contractData = [
@@ -431,7 +437,7 @@ class apiController {
                 'message' => 'Gán sạp cho tiểu thương thành công!'
             ]);
         } catch (Exception $e) {
-            $this->abort500($e, 'create', 'contract');
+            $this->func->abort500($e, 'create', 'contract');
         }
     }
 
@@ -439,8 +445,8 @@ class apiController {
      * API chuyển đổi sạp của tiểu thương (AJAX POST)
      */
     public function transferStall() {
-        $this->abort405('POST', 'update', 'stall');
-        $this->abort400(['current_stall_id', 'new_stall_id'], 'update', 'stall', 'Thiếu thông tin sạp hiện tại hoặc sạp mới.');
+        $this->func->abort405('POST', 'update', 'stall');
+        $this->func->abort400(['current_stall_id', 'new_stall_id'], 'update', 'stall', 'Thiếu thông tin sạp hiện tại hoặc sạp mới.');
 
         $currentStallId = $_POST['current_stall_id'];
         $newStallId = $_POST['new_stall_id'];
@@ -449,11 +455,11 @@ class apiController {
             $stallModel = new stallModel();
             $currentStall = $stallModel->getById($currentStallId);
             $newStall = $stallModel->getById($newStallId);
-            $this->abort400($currentStall && $newStall, 'update', 'stall', 'Không tìm thấy thông tin sạp.');
+            $this->func->abort400($currentStall && $newStall, 'update', 'stall', 'Không tìm thấy thông tin sạp.');
 
             $contractModel = new contractModel();
             $contract1 = $contractModel->getActiveContractByStall($currentStallId);
-            $this->abort400($contract1 !== null && $contract1 !== false, 'update', 'stall', 'Không tìm thấy hợp đồng đang hoạt động cho sạp hiện tại.');
+            $this->func->abort400($contract1 !== null && $contract1 !== false, 'update', 'stall', 'Không tìm thấy hợp đồng đang hoạt động cho sạp hiện tại.');
 
             $message = $stallModel->transferStall($currentStall, $newStall, $contract1);
 
@@ -462,7 +468,7 @@ class apiController {
                 'message' => $message
             ]);
         } catch (Exception $e) {
-            $this->abort500($e, 'update', 'stall');
+            $this->func->abort500($e, 'update', 'stall');
         }
     }
 
@@ -547,7 +553,7 @@ class apiController {
      * API thêm hợp đồng mới (AJAX POST)
      */
     public function addContract() {
-        $this->abort405('POST', 'create', 'contract');
+        $this->func->abort405('POST', 'create', 'contract');
 
         $data = [
             'trader_id'       => $_POST['trader_id'] ?? '',
@@ -570,32 +576,32 @@ class apiController {
                   ->required('end_date', $data['end_date'], 'Vui lòng nhập ngày hết hạn.')
                   ->required('deposit', $data['deposit'], 'Vui lòng nhập tiền đặt cọc.');
 
-        $this->abort400($validator, 'create', 'contract');
-        $this->abort400(strtotime($data['start_date']) <= strtotime($data['end_date']), 'create', 'contract', 'Ngày bắt đầu không được lớn hơn ngày kết thúc.');
+        $this->func->abort400($validator, 'create', 'contract');
+        $this->func->abort400(strtotime($data['start_date']) <= strtotime($data['end_date']), 'create', 'contract', 'Ngày bắt đầu không được lớn hơn ngày kết thúc.');
 
         try {
             $contractModel = new contractModel();
             
             // Kiểm tra trùng số hợp đồng
-            $this->abort400(!$contractModel->isContractNumberExists($data['contract_number']), 'create', 'contract', 'Số hợp đồng này đã tồn tại trên hệ thống.');
+            $this->func->abort400(!$contractModel->isContractNumberExists($data['contract_number']), 'create', 'contract', 'Số hợp đồng này đã tồn tại trên hệ thống.');
 
             // Kiểm tra xem sạp có đang trống hay không
             $stallModel = new stallModel();
             $stall = $stallModel->getById($data['stall_id']);
-            $this->abort400($stall && $stall['status'] === 'empty', 'create', 'contract', 'Sạp được chọn không còn trống để cho thuê.');
+            $this->func->abort400($stall && $stall['status'] === 'empty', 'create', 'contract', 'Sạp được chọn không còn trống để cho thuê.');
 
             // Xử lý upload file PDF đính kèm (nếu có)
             if (isset($_FILES['contract_file']) && $_FILES['contract_file']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploader = new upload('contracts', ['pdf'], 15); // Chỉ nhận file PDF
                 $savedFile = $uploader->save('contract_file');
-                $this->abort400($savedFile !== false, 'create', 'contract', 'Lỗi tải file hợp đồng: ' . reset($uploader->getErrors()));
+                $this->func->abort400($savedFile !== false, 'create', 'contract', 'Lỗi tải file hợp đồng: ' . reset($uploader->getErrors()));
                 $data['contract_file'] = $savedFile;
             }
 
             $contractModel->create($data);
-            $this->apiResponse('create', 'contract', true);
+            $this->func->apiResponse('create', 'contract', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'create', 'contract');
+            $this->func->abort500($e, 'create', 'contract');
         }
     }
 
@@ -603,22 +609,22 @@ class apiController {
      * API gia hạn hợp đồng (AJAX POST)
      */
     public function renewContract() {
-        $this->abort405('POST', 'update', 'contract');
-        $this->abort400(['contract_id', 'new_end_date'], 'update', 'contract', 'Thiếu thông tin gia hạn.');
+        $this->func->abort405('POST', 'update', 'contract');
+        $this->func->abort400(['contract_id', 'new_end_date'], 'update', 'contract', 'Thiếu thông tin gia hạn.');
 
         $contractId = $_POST['contract_id'];
         $newEndDate = $_POST['new_end_date'];
 
         try {
             $contractModel = new contractModel();
-            $contract = $this->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
+            $contract = $this->func->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
 
-            $this->abort400(strtotime($newEndDate) > strtotime($contract['end_date']), 'update', 'contract', 'Ngày gia hạn mới phải sau ngày hết hạn hiện tại (' . $contract['end_date'] . ').');
+            $this->func->abort400(strtotime($newEndDate) > strtotime($contract['end_date']), 'update', 'contract', 'Ngày gia hạn mới phải sau ngày hết hạn hiện tại (' . $contract['end_date'] . ').');
 
             $contractModel->renew($contractId, $newEndDate);
-            $this->apiResponse('update', 'contract', true);
+            $this->func->apiResponse('update', 'contract', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'update', 'contract');
+            $this->func->abort500($e, 'update', 'contract');
         }
     }
 
@@ -626,19 +632,19 @@ class apiController {
      * API thanh lý hợp đồng (AJAX POST)
      */
     public function liquidateContract() {
-        $this->abort405('POST', 'update', 'contract');
-        $this->abort400('contract_id', 'update', 'contract');
+        $this->func->abort405('POST', 'update', 'contract');
+        $this->func->abort400('contract_id', 'update', 'contract');
 
         $contractId = $_POST['contract_id'];
 
         try {
             $contractModel = new contractModel();
-            $this->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
+            $this->func->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
 
             $contractModel->liquidate($contractId);
-            $this->apiResponse('update', 'contract', true);
+            $this->func->apiResponse('update', 'contract', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'update', 'contract');
+            $this->func->abort500($e, 'update', 'contract');
         }
     }
 
@@ -646,19 +652,19 @@ class apiController {
      * API chấm dứt hợp đồng trước hạn (AJAX POST)
      */
     public function terminateContract() {
-        $this->abort405('POST', 'update', 'contract');
-        $this->abort400('contract_id', 'update', 'contract');
+        $this->func->abort405('POST', 'update', 'contract');
+        $this->func->abort400('contract_id', 'update', 'contract');
 
         $contractId = $_POST['contract_id'];
 
         try {
             $contractModel = new contractModel();
-            $this->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
+            $this->func->abort404($contractModel, 'getById', $contractId, 'update', 'contract');
 
             $contractModel->terminate($contractId);
-            $this->apiResponse('update', 'contract', true);
+            $this->func->apiResponse('update', 'contract', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'update', 'contract');
+            $this->func->abort500($e, 'update', 'contract');
         }
     }
 
@@ -666,19 +672,19 @@ class apiController {
      * API xóa mềm hợp đồng (AJAX POST - status_id = 99)
      */
     public function deleteContract() {
-        $this->abort405('POST', 'delete', 'contract');
-        $this->abort400('contract_id', 'delete', 'contract');
+        $this->func->abort405('POST', 'delete', 'contract');
+        $this->func->abort400('contract_id', 'delete', 'contract');
 
         $contractId = $_POST['contract_id'];
 
         try {
             $contractModel = new contractModel();
-            $this->abort404($contractModel, 'getById', $contractId, 'delete', 'contract');
+            $this->func->abort404($contractModel, 'getById', $contractId, 'delete', 'contract');
 
             $contractModel->softDelete($contractId);
-            $this->apiResponse('delete', 'contract', true);
+            $this->func->apiResponse('delete', 'contract', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'delete', 'contract');
+            $this->func->abort500($e, 'delete', 'contract');
         }
     }
 
@@ -686,7 +692,7 @@ class apiController {
      * API thêm phụ lục hợp đồng (AJAX POST)
      */
     public function addContractAppendix() {
-        $this->abort405('POST', 'create', 'appendix');
+        $this->func->abort405('POST', 'create', 'appendix');
 
         $data = [
             'contract_id'     => $_POST['contract_id'] ?? '',
@@ -705,25 +711,25 @@ class apiController {
                   ->required('effect_date', $data['effect_date'], 'Vui lòng nhập ngày có hiệu lực.')
                   ->required('content', $data['content'], 'Nội dung phụ lục không được để trống.');
 
-        $this->abort400($validator, 'create', 'appendix');
+        $this->func->abort400($validator, 'create', 'appendix');
 
         try {
             $contractModel = new contractModel();
             // Kiểm tra trùng số phụ lục
-            $this->abort400(!$contractModel->isAppendixNumberExists($data['appendix_number']), 'create', 'appendix', 'Số phụ lục này đã tồn tại trên hệ thống.');
+            $this->func->abort400(!$contractModel->isAppendixNumberExists($data['appendix_number']), 'create', 'appendix', 'Số phụ lục này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file phụ lục (nếu có)
             if (isset($_FILES['appendix_file']) && $_FILES['appendix_file']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploader = new upload('contracts/appendices', ['jpg', 'jpeg', 'png', 'pdf'], 15);
                 $savedFile = $uploader->save('appendix_file');
-                $this->abort400($savedFile !== false, 'create', 'appendix', 'Lỗi tải file phụ lục: ' . reset($uploader->getErrors()));
+                $this->func->abort400($savedFile !== false, 'create', 'appendix', 'Lỗi tải file phụ lục: ' . reset($uploader->getErrors()));
                 $data['file'] = $savedFile;
             }
 
             $contractModel->addAppendix($data);
-            $this->apiResponse('create', 'appendix', true);
+            $this->func->apiResponse('create', 'appendix', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'create', 'appendix');
+            $this->func->abort500($e, 'create', 'appendix');
         }
     }
 
@@ -822,7 +828,7 @@ class apiController {
      * API thêm giấy tờ vệ sinh ATTP mới (AJAX POST)
      */
     public function addCertificate() {
-        $this->abort405('POST', 'create', 'certificate');
+        $this->func->abort405('POST', 'create', 'certificate');
 
         $data = [
             'trader_id'   => $_POST['trader_id'] ?? '',
@@ -844,25 +850,25 @@ class apiController {
                   ->required('issue_date', $data['issue_date'], 'Bạn phải nhập ngày hiệu lực bắt đầu.')
                   ->required('expiry_date', $data['expiry_date'], 'Bạn phải nhập ngày hiệu lực kết thúc.');
 
-        $this->abort400($validator, 'create', 'certificate');
-        $this->abort400(strtotime($data['issue_date']) <= strtotime($data['expiry_date']), 'create', 'certificate', 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.');
+        $this->func->abort400($validator, 'create', 'certificate');
+        $this->func->abort400(strtotime($data['issue_date']) <= strtotime($data['expiry_date']), 'create', 'certificate', 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.');
 
         try {
             $foodsafetyModel = new foodsafetyModel();
-            $this->abort400(!$foodsafetyModel->isDocNumberExists($data['doc_number']), 'create', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
+            $this->func->abort400(!$foodsafetyModel->isDocNumberExists($data['doc_number']), 'create', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file đính kèm (nếu có)
             if (isset($_FILES['certificate_file']) && $_FILES['certificate_file']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploader = new upload('foodsafety', ['jpg', 'jpeg', 'png', 'pdf'], 15);
                 $savedFile = $uploader->save('certificate_file');
-                $this->abort400($savedFile !== false, 'create', 'certificate', 'Lỗi tải file đính kèm: ' . reset($uploader->getErrors()));
+                $this->func->abort400($savedFile !== false, 'create', 'certificate', 'Lỗi tải file đính kèm: ' . reset($uploader->getErrors()));
                 $data['file'] = $savedFile;
             }
 
             $foodsafetyModel->createCertificate($data);
-            $this->apiResponse('create', 'certificate', true);
+            $this->func->apiResponse('create', 'certificate', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'create', 'certificate');
+            $this->func->abort500($e, 'create', 'certificate');
         }
     }
 
@@ -870,8 +876,8 @@ class apiController {
      * API cập nhật giấy tờ vệ sinh ATTP (AJAX POST)
      */
     public function editCertificate() {
-        $this->abort405('POST', 'update', 'certificate');
-        $this->abort400('id', 'update', 'certificate');
+        $this->func->abort405('POST', 'update', 'certificate');
+        $this->func->abort400('id', 'update', 'certificate');
 
         $id = $_POST['id'];
 
@@ -895,18 +901,18 @@ class apiController {
                   ->required('issue_date', $data['issue_date'], 'Bạn phải nhập ngày hiệu lực bắt đầu.')
                   ->required('expiry_date', $data['expiry_date'], 'Bạn phải nhập ngày hiệu lực kết thúc.');
 
-        $this->abort400($validator, 'update', 'certificate');
-        $this->abort400(strtotime($data['issue_date']) <= strtotime($data['expiry_date']), 'update', 'certificate', 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.');
+        $this->func->abort400($validator, 'update', 'certificate');
+        $this->func->abort400(strtotime($data['issue_date']) <= strtotime($data['expiry_date']), 'update', 'certificate', 'Ngày hiệu lực bắt đầu không được lớn hơn ngày hết hạn.');
 
         try {
             $foodsafetyModel = new foodsafetyModel();
-            $this->abort400(!$foodsafetyModel->isDocNumberExists($data['doc_number'], $id), 'update', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
+            $this->func->abort400(!$foodsafetyModel->isDocNumberExists($data['doc_number'], $id), 'update', 'certificate', 'Số giấy tờ/chứng nhận này đã tồn tại trên hệ thống.');
 
             // Xử lý upload file đính kèm (nếu có)
             if (isset($_FILES['certificate_file']) && $_FILES['certificate_file']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploader = new upload('foodsafety', ['jpg', 'jpeg', 'png', 'pdf'], 15);
                 $savedFile = $uploader->save('certificate_file');
-                $this->abort400($savedFile !== false, 'update', 'certificate', 'Lỗi tải file đính kèm: ' . reset($uploader->getErrors()));
+                $this->func->abort400($savedFile !== false, 'update', 'certificate', 'Lỗi tải file đính kèm: ' . reset($uploader->getErrors()));
                 $data['file'] = $savedFile;
             }
 
@@ -920,9 +926,9 @@ class apiController {
             }
 
             $foodsafetyModel->updateCertificate($id, $data);
-            $this->apiResponse('update', 'certificate', true);
+            $this->func->apiResponse('update', 'certificate', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'update', 'certificate');
+            $this->func->abort500($e, 'update', 'certificate');
         }
     }
 
@@ -930,17 +936,17 @@ class apiController {
      * API xóa mềm giấy tờ vệ sinh ATTP (AJAX POST)
      */
     public function deleteCertificate() {
-        $this->abort405('POST', 'delete', 'certificate');
-        $this->abort400('id', 'delete', 'certificate');
+        $this->func->abort405('POST', 'delete', 'certificate');
+        $this->func->abort400('id', 'delete', 'certificate');
 
         $id = $_POST['id'];
 
         try {
             $foodsafetyModel = new foodsafetyModel();
             $foodsafetyModel->deleteCertificate($id);
-            $this->apiResponse('delete', 'certificate', true);
+            $this->func->apiResponse('delete', 'certificate', true);
         } catch (Exception $e) {
-            $this->abort500($e, 'delete', 'certificate');
+            $this->func->abort500($e, 'delete', 'certificate');
         }
     }
 
@@ -964,6 +970,81 @@ class apiController {
             ], 500);
         }
     }
+
+    /**
+     * API lấy cấu trúc cây phân cấp sạp chợ (AJAX GET)
+     */
+    public function getStallTree() {
+        try {
+            $mapModel = new mapModel();
+            $tree = $mapModel->getStallTree();
+            $this->response([
+                'status' => 200,
+                'data' => $tree
+            ]);
+        } catch (Exception $e) {
+            $this->response([
+                'status' => 500,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API lấy thông tin chi tiết đầy đủ của sạp, hợp đồng và tiểu thương (AJAX GET)
+     */
+    public function getStallDetails() {
+        $stallId = $_GET['id'] ?? 0;
+        if (!$stallId) {
+            $this->response(['status' => 400, 'message' => 'Thiếu ID sạp chợ.'], 400);
+        }
+
+        try {
+            $mapModel = new mapModel();
+            $details = $mapModel->getFullDetails($stallId);
+            if (!$details) {
+                $this->response(['status' => 404, 'message' => 'Không tìm thấy sạp chợ hoặc không có quyền truy cập.'], 404);
+            }
+            $this->response([
+                'status' => 200,
+                'data' => $details
+            ]);
+        } catch (Exception $e) {
+            $this->response([
+                'status' => 500,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * API Thay đổi active_market_id trong Session (AJAX GET)
+     */
+    public function changeMarketScope() {
+        $marketId = $_GET['id'] ?? 0;
+        if (!$marketId) {
+            $this->response(['status' => 400, 'message' => 'Thiếu ID chợ.'], 400);
+        }
+
+        // Kiểm tra xem user có quyền truy cập chợ này không
+        $accessible = marketService::getAccessibleMarketIds();
+        if (!in_array((int)$marketId, $accessible) && !marketService::isSuperAdmin()) {
+            $this->response(['status' => 403, 'message' => 'Không có quyền truy cập chợ này.'], 403);
+        }
+
+        // Lưu vào Session
+        session::set('active_market_id', (int)$marketId);
+        
+        // Reset cache danh sách chợ
+        session::delete('accessible_market_ids');
+
+        $this->response([
+            'status' => 200,
+            'message' => 'Chuyển đổi chợ thành công!'
+        ]);
+    }
+
+
 
     /**
      * API lưu cấu hình các phần tử bản đồ (AJAX POST)
@@ -1004,12 +1085,12 @@ class apiController {
      * API lấy chi tiết một danh mục (AJAX GET)
      */
     public function getCategoryDetail() {
-        $this->abort405('GET', 'view', 'category');
+        $this->func->abort405('GET', 'view', 'category');
         
         $id = $_GET['id'] ?? '';
         $type = $_GET['type'] ?? '';
         
-        $this->abort400($id && $type, 'view', 'category', 'Thiếu ID hoặc Loại danh mục.');
+        $this->func->abort400($id && $type, 'view', 'category', 'Thiếu ID hoặc Loại danh mục.');
 
         try {
             $categoryModel = new categoryModel();
@@ -1023,7 +1104,7 @@ class apiController {
                 'data' => $item
             ]);
         } catch (Exception $e) {
-            $this->abort500($e, 'view', 'category');
+            $this->func->abort500($e, 'view', 'category');
         }
     }
 
@@ -1031,8 +1112,8 @@ class apiController {
      * API thêm danh mục mới (AJAX POST)
      */
     public function addCategory() {
-        $this->abort405('POST', 'create', 'category');
-        $this->abort400('type', 'create', 'category', 'Thiếu loại danh mục.');
+        $this->func->abort405('POST', 'create', 'category');
+        $this->func->abort400('type', 'create', 'category', 'Thiếu loại danh mục.');
 
         $type = $_POST['type'];
         $categoryModel = new categoryModel();
@@ -1049,10 +1130,10 @@ class apiController {
                     'description' => $_POST['description'] ?? ''
                 ];
                 $validator->required('area_name', $data['area_name'], 'Tên khu vực không được để trống.');
-                $this->abort400($validator, 'create', 'category');
+                $this->func->abort400($validator, 'create', 'category');
                 
                 // Kiểm tra trùng tên
-                $this->abort400(!$categoryModel->isCodeExists('area', 'area_name', $data['area_name']), 'create', 'category', 'Tên khu vực này đã tồn tại.');
+                $this->func->abort400(!$categoryModel->isCodeExists('area', 'area_name', $data['area_name']), 'create', 'category', 'Tên khu vực này đã tồn tại.');
 
             } elseif ($type === 'stall_type') {
                 $data = [
@@ -1062,9 +1143,9 @@ class apiController {
                 ];
                 $validator->required('type_code', $data['type_code'], 'Mã loại sạp không được để trống.')
                           ->required('type_name', $data['type_name'], 'Tên loại sạp không được để trống.');
-                $this->abort400($validator, 'create', 'category');
+                $this->func->abort400($validator, 'create', 'category');
 
-                $this->abort400(!$categoryModel->isCodeExists('stall_type', 'type_code', $data['type_code']), 'create', 'category', 'Mã loại sạp này đã tồn tại.');
+                $this->func->abort400(!$categoryModel->isCodeExists('stall_type', 'type_code', $data['type_code']), 'create', 'category', 'Mã loại sạp này đã tồn tại.');
 
             } elseif ($type === 'business_line') {
                 $data = [
@@ -1074,9 +1155,9 @@ class apiController {
                 ];
                 $validator->required('line_code', $data['line_code'], 'Mã ngành hàng không được để trống.')
                           ->required('line_name', $data['line_name'], 'Tên ngành hàng không được để trống.');
-                $this->abort400($validator, 'create', 'category');
+                $this->func->abort400($validator, 'create', 'category');
 
-                $this->abort400(!$categoryModel->isCodeExists('business_line', 'line_code', $data['line_code']), 'create', 'category', 'Mã ngành hàng này đã tồn tại.');
+                $this->func->abort400(!$categoryModel->isCodeExists('business_line', 'line_code', $data['line_code']), 'create', 'category', 'Mã ngành hàng này đã tồn tại.');
 
             } elseif ($type === 'document_type') {
                 $data = [
@@ -1086,11 +1167,11 @@ class apiController {
                 ];
                 $validator->required('type_code', $data['type_code'], 'Mã loại giấy tờ không được để trống.')
                           ->required('type_name', $data['type_name'], 'Tên loại giấy tờ không được để trống.');
-                $this->abort400($validator, 'create', 'category');
+                $this->func->abort400($validator, 'create', 'category');
 
-                $this->abort400(!$categoryModel->isCodeExists('document_type', 'type_code', $data['type_code']), 'create', 'category', 'Mã loại giấy tờ này đã tồn tại.');
+                $this->func->abort400(!$categoryModel->isCodeExists('document_type', 'type_code', $data['type_code']), 'create', 'category', 'Mã loại giấy tờ này đã tồn tại.');
             } else {
-                $this->abort400(false, 'create', 'category', 'Loại danh mục không hợp lệ.');
+                $this->func->abort400(false, 'create', 'category', 'Loại danh mục không hợp lệ.');
             }
 
             $itemId = $categoryModel->createItem($type, $data);
@@ -1100,7 +1181,7 @@ class apiController {
                 'id' => $itemId
             ]);
         } catch (Exception $e) {
-            $this->abort500($e, 'create', 'category');
+            $this->func->abort500($e, 'create', 'category');
         }
     }
 
@@ -1108,8 +1189,8 @@ class apiController {
      * API cập nhật danh mục (AJAX POST)
      */
     public function editCategory() {
-        $this->abort405('POST', 'update', 'category');
-        $this->abort400(['id', 'type'], 'update', 'category', 'Thiếu thông tin danh mục.');
+        $this->func->abort405('POST', 'update', 'category');
+        $this->func->abort400(['id', 'type'], 'update', 'category', 'Thiếu thông tin danh mục.');
 
         $id = $_POST['id'];
         $type = $_POST['type'];
@@ -1133,9 +1214,9 @@ class apiController {
                     'description' => $_POST['description'] ?? ''
                 ];
                 $validator->required('area_name', $data['area_name'], 'Tên khu vực không được để trống.');
-                $this->abort400($validator, 'update', 'category');
+                $this->func->abort400($validator, 'update', 'category');
                 
-                $this->abort400(!$categoryModel->isCodeExists('area', 'area_name', $data['area_name'], $id), 'update', 'category', 'Tên khu vực này đã tồn tại.');
+                $this->func->abort400(!$categoryModel->isCodeExists('area', 'area_name', $data['area_name'], $id), 'update', 'category', 'Tên khu vực này đã tồn tại.');
 
             } elseif ($type === 'stall_type') {
                 $data = [
@@ -1145,9 +1226,9 @@ class apiController {
                 ];
                 $validator->required('type_code', $data['type_code'], 'Mã loại sạp không được để trống.')
                           ->required('type_name', $data['type_name'], 'Tên loại sạp không được để trống.');
-                $this->abort400($validator, 'update', 'category');
+                $this->func->abort400($validator, 'update', 'category');
 
-                $this->abort400(!$categoryModel->isCodeExists('stall_type', 'type_code', $data['type_code'], $id), 'update', 'category', 'Mã loại sạp này đã tồn tại.');
+                $this->func->abort400(!$categoryModel->isCodeExists('stall_type', 'type_code', $data['type_code'], $id), 'update', 'category', 'Mã loại sạp này đã tồn tại.');
 
             } elseif ($type === 'business_line') {
                 $data = [
@@ -1157,9 +1238,9 @@ class apiController {
                 ];
                 $validator->required('line_code', $data['line_code'], 'Mã ngành hàng không được để trống.')
                           ->required('line_name', $data['line_name'], 'Tên ngành hàng không được để trống.');
-                $this->abort400($validator, 'update', 'category');
+                $this->func->abort400($validator, 'update', 'category');
 
-                $this->abort400(!$categoryModel->isCodeExists('business_line', 'line_code', $data['line_code'], $id), 'update', 'category', 'Mã ngành hàng này đã tồn tại.');
+                $this->func->abort400(!$categoryModel->isCodeExists('business_line', 'line_code', $data['line_code'], $id), 'update', 'category', 'Mã ngành hàng này đã tồn tại.');
 
             } elseif ($type === 'document_type') {
                 $data = [
@@ -1169,11 +1250,11 @@ class apiController {
                 ];
                 $validator->required('type_code', $data['type_code'], 'Mã loại giấy tờ không được để trống.')
                           ->required('type_name', $data['type_name'], 'Tên loại giấy tờ không được để trống.');
-                $this->abort400($validator, 'update', 'category');
+                $this->func->abort400($validator, 'update', 'category');
 
-                $this->abort400(!$categoryModel->isCodeExists('document_type', 'type_code', $data['type_code'], $id), 'update', 'category', 'Mã loại giấy tờ này đã tồn tại.');
+                $this->func->abort400(!$categoryModel->isCodeExists('document_type', 'type_code', $data['type_code'], $id), 'update', 'category', 'Mã loại giấy tờ này đã tồn tại.');
             } else {
-                $this->abort400(false, 'update', 'category', 'Loại danh mục không hợp lệ.');
+                $this->func->abort400(false, 'update', 'category', 'Loại danh mục không hợp lệ.');
             }
 
             $categoryModel->updateItem($type, $id, $data);
@@ -1182,7 +1263,7 @@ class apiController {
                 'message' => 'Cập nhật danh mục thành công!'
             ]);
         } catch (Exception $e) {
-            $this->abort500($e, 'update', 'category');
+            $this->func->abort500($e, 'update', 'category');
         }
     }
 
@@ -1190,8 +1271,8 @@ class apiController {
      * API xóa danh mục (AJAX POST)
      */
     public function deleteCategory() {
-        $this->abort405('POST', 'delete', 'category');
-        $this->abort400(['id', 'type'], 'delete', 'category', 'Thiếu thông tin danh mục cần xóa.');
+        $this->func->abort405('POST', 'delete', 'category');
+        $this->func->abort400(['id', 'type'], 'delete', 'category', 'Thiếu thông tin danh mục cần xóa.');
 
         $id = $_POST['id'] ?? $_GET['id'] ?? '';
         $type = $_POST['type'] ?? $_GET['type'] ?? '';
@@ -1218,3 +1299,4 @@ class apiController {
     }
 
 }
+

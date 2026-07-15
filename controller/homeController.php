@@ -105,6 +105,17 @@ class homeController {
     }
 
     /**
+     * Trang Sơ đồ cây sạp chợ công khai cho khách hàng tra cứu
+     */
+    public function map_tree() {
+        $this->view('frontend/home/tree', [
+            'title' => 'Tra cứu Sơ đồ Sạp chợ',
+            'activePage' => 'map_tree'
+        ]);
+    }
+
+
+    /**
      * Danh sách tiểu thương
      */
     public function traders() {

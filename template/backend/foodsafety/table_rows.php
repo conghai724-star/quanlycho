@@ -108,7 +108,7 @@
                         <i class="fa-solid fa-pen-to-square"></i>
                     </a>
                     <!-- Xóa -->
-                    <button class="btn btn-outline btn-sm" onclick="deleteCertificate(<?php echo $cert['id']; ?>, '<?php echo htmlspecialchars($cert['doc_number']); ?>')" style="padding: 4px 6px; color: var(--red);" title="Xóa mềm">
+                    <button class="btn btn-outline btn-sm" onclick="App.foodsafety.deleteCertificate(<?php echo $cert['id']; ?>, '<?php echo htmlspecialchars($cert['doc_number']); ?>')" style="padding: 4px 6px; color: var(--red);" title="Xóa mềm">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>

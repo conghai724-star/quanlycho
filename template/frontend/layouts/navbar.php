@@ -17,7 +17,8 @@
             <nav class="main-nav">
                 <a href="<?php echo BASE_URL; ?>" class="<?php echo ($activePage ?? 'home') === 'home' ? 'active' : ''; ?>">Trang chủ</a>
                 <a href="<?php echo BASE_URL; ?>home/about" class="<?php echo ($activePage ?? 'home') === 'about' ? 'active' : ''; ?>">Giới thiệu</a>
-                <a href="<?php echo BASE_URL; ?>home/map" class="<?php echo ($activePage ?? 'home') === 'map' ? 'active' : ''; ?>">Sơ đồ chợ</a>
+                <a href="<?php echo BASE_URL; ?>home/map" class="<?php echo ($activePage ?? 'home') === 'map' ? 'active' : ''; ?>">Sơ đồ chợ (SVG)</a>
+                <a href="<?php echo BASE_URL; ?>home/map_tree" class="<?php echo ($activePage ?? 'home') === 'map_tree' ? 'active' : ''; ?>">Tra cứu Sạp (Cây)</a>
                 <a href="<?php echo BASE_URL; ?>home/traders" class="<?php echo ($activePage ?? 'home') === 'traders' ? 'active' : ''; ?>">Tiểu thương</a>
                 <a href="<?php echo BASE_URL; ?>home/register" class="<?php echo ($activePage ?? 'home') === 'register' ? 'active' : ''; ?>">Đăng ký thuê sạp</a>
                 <a href="<?php echo BASE_URL; ?>#tintuc">Tin tức</a>
@@ -43,7 +44,8 @@
             <nav class="mobile-nav-panel">
                 <a href="<?php echo BASE_URL; ?>" class="<?php echo ($activePage ?? 'home') === 'home' ? 'active' : ''; ?>">Trang chủ</a>
                 <a href="<?php echo BASE_URL; ?>home/about" class="<?php echo ($activePage ?? 'home') === 'about' ? 'active' : ''; ?>">Giới thiệu</a>
-                <a href="<?php echo BASE_URL; ?>home/map" class="<?php echo ($activePage ?? 'home') === 'map' ? 'active' : ''; ?>">Sơ đồ chợ</a>
+                <a href="<?php echo BASE_URL; ?>home/map" class="<?php echo ($activePage ?? 'home') === 'map' ? 'active' : ''; ?>">Sơ đồ chợ (SVG)</a>
+                <a href="<?php echo BASE_URL; ?>home/map_tree" class="<?php echo ($activePage ?? 'home') === 'map_tree' ? 'active' : ''; ?>">Tra cứu Sạp (Cây)</a>
                 <a href="<?php echo BASE_URL; ?>home/traders" class="<?php echo ($activePage ?? 'home') === 'traders' ? 'active' : ''; ?>">Tiểu thương</a>
                 <a href="<?php echo BASE_URL; ?>home/register" class="<?php echo ($activePage ?? 'home') === 'register' ? 'active' : ''; ?>">Đăng ký thuê sạp</a>
                 <a href="<?php echo BASE_URL; ?>#tintuc">Tin tức</a>

@@ -61,7 +61,7 @@
                 <?php endif; ?>
             </td>
             <td style="padding: 14px 16px; text-align: center;">
-                <button class="btn btn-ghost btn-sm" onclick="viewAppendices(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>')" style="padding: 4px; color: var(--primary); display: inline-flex; align-items: center; gap: 4px;" title="Xem phụ lục hợp đồng">
+                <button class="btn btn-ghost btn-sm" onclick="App.contract.viewAppendices(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>')" style="padding: 4px; color: var(--primary); display: inline-flex; align-items: center; gap: 4px;" title="Xem phụ lục hợp đồng">
                     <i class="fa-solid fa-paperclip"></i> (<?php echo $appCount; ?>)
                 </button>
             </td>
@@ -74,19 +74,19 @@
                 <div style="display: flex; justify-content: flex-end; gap: 4px;">
                     <!-- Gia hạn hợp đồng (Chỉ khi chưa bị xóa/chưa thanh lý) -->
                     <?php if ($contract['status_code'] !== 'liquidated' && $contract['status_code'] !== 'terminated'): ?>
-                        <button class="btn btn-outline btn-sm" onclick="renewContract(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>', '<?php echo $contract['end_date']; ?>')" style="padding: 4px 6px; color: var(--primary);" title="Gia hạn">
+                        <button class="btn btn-outline btn-sm" onclick="App.contract.renewContract(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>', '<?php echo $contract['end_date']; ?>')" style="padding: 4px 6px; color: var(--primary);" title="Gia hạn">
                             <i class="fa-solid fa-calendar-plus"></i>
                         </button>
                         <!-- Thanh lý / Chấm dứt -->
-                        <button class="btn btn-outline btn-sm" onclick="liquidateContract(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>')" style="padding: 4px 6px; color: var(--orange);" title="Thanh lý">
+                        <button class="btn btn-outline btn-sm" onclick="App.contract.liquidateContract(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>')" style="padding: 4px 6px; color: var(--orange);" title="Thanh lý">
                             <i class="fa-solid fa-file-contract"></i>
                         </button>
-                        <button class="btn btn-outline btn-sm" onclick="terminateContract(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>')" style="padding: 4px 6px; color: var(--red);" title="Chấm dứt trước hạn">
+                        <button class="btn btn-outline btn-sm" onclick="App.contract.terminateContract(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>')" style="padding: 4px 6px; color: var(--red);" title="Chấm dứt trước hạn">
                             <i class="fa-solid fa-ban"></i>
                         </button>
                     <?php endif; ?>
                     <!-- Xóa mềm -->
-                    <button class="btn btn-outline btn-sm" onclick="deleteContract(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>')" style="padding: 4px 6px; color: var(--text-muted);" title="Xóa mềm">
+                    <button class="btn btn-outline btn-sm" onclick="App.contract.deleteContract(<?php echo $contract['id']; ?>, '<?php echo htmlspecialchars($contract['contract_number']); ?>')" style="padding: 4px 6px; color: var(--text-muted);" title="Xóa mềm">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>

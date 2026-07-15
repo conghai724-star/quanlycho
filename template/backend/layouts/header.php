@@ -114,6 +114,9 @@ $htmlBg = $theme === 'dark' ? '#0f1623' : '#f5f7fb';
 
     <!-- Gentelella CSS chính thức -->
     <link rel="stylesheet" crossorigin href="<?php echo BASE_URL; ?>public/assets/css/gentelella.css">
+
+    <!-- jQuery (cần cho inline script trong các view PHP dùng $().ready / $.ajax) -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 </head>
 <?php
 $successMsg = session::get('success_message');

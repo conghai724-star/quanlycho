@@ -85,7 +85,135 @@
 <?php csrf_field(); ?>
 
 <!-- Nạp JS xử lý riêng cho trang tiểu thương -->
-<script src="<?php echo BASE_URL; ?>public/assets/js/pages/admin/trader.js?v=<?php echo time(); ?>"></script>
+<script>
+$(document).ready(function() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var swalBg = isDark ? '#1a2332' : '#ffffff';
+    var swalColor = isDark ? '#ffffff' : '#0f1623';
+
+    // Khởi tạo tính năng xóa tiểu thương
+    // App.utils.initDelete({ btnClass: 'btn-open-delete-trader', idAttr: 'traderId', nameAttr: 'traderName', label: 'hồ sơ tiểu thương' });
+    $(document).on('click', '.btn-open-delete-trader', function(e) {
+        e.preventDefault();
+        var btn = this;
+        var id = $(btn).data('trader-id');
+        var name = $(btn).data('trader-name') || '';
+        var csrf = $('input[name="csrf_token"]').val() || '';
+
+        Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn có chắc chắn muốn xóa hồ sơ tiểu thương "' + name + '" không? Hành động này không thể hoàn tác.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy bỏ',
+            confirmButtonColor: '#d63939',
+            cancelButtonColor: '#626d7d',
+            background: swalBg,
+            color: swalColor
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Đang xử lý...',
+                    allowOutsideClick: false,
+                    background: swalBg,
+                    color: swalColor,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+                
+                $.ajax({
+                    type: 'POST',
+                    url: $(btn).data('url'),
+                    data: { id: id, csrf_token: csrf },
+                    dataType: 'json',
+                    success: function(data) {
+                        Swal.close();
+                        if (data.status === 200) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Thành công',
+                                text: data.message,
+                                timer: 1500,
+                                background: swalBg,
+                                color: swalColor
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Thất bại', text: data.message, background: swalBg, color: swalColor });
+                        }
+                    },
+                    error: function() {
+                        Swal.close();
+                        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra khi kết nối máy chủ.', background: swalBg, color: swalColor });
+                    }
+                });
+            }
+        });
+    });
+
+    // Khởi tạo bộ lọc tìm kiếm bằng AJAX
+    // App.utils.initFilterFormAjax({ ... });
+    (function() {
+        var btn = $('#btn-filter-traders');
+        if (!btn.length) return;
+        var form = btn.closest('form');
+        var inputs = form.find('input[name], select[name]');
+        var tbody = $('#table-body-traders');
+        var totalEl = $('#filter-total-traders');
+        var exportExcel = $('#btn-export-excel-traders');
+        var exportPdf = $('#btn-export-pdf-traders');
+
+        function doFilter() {
+            var params = {};
+            inputs.each(function() {
+                var value = $(this).val().trim();
+                if (value !== '') {
+                    params[$(this).attr('name')] = value;
+                }
+            });
+            var query = $.param(params);
+            if (tbody.length) {
+                tbody.css('opacity', '0.5');
+            }
+            $.ajax({
+                type: 'GET',
+                url: '<?php echo BASE_URL; ?>api/filterTraders',
+                data: params,
+                dataType: 'json',
+                success: function(data) {
+                    if (tbody.length) {
+                        tbody.html(data.html).css('opacity', '1');
+                    }
+                    if (totalEl.length && typeof data.total !== 'undefined') {
+                        totalEl.text(data.total);
+                    }
+                    if (exportExcel.length && typeof data.queryString !== 'undefined') {
+                        exportExcel.attr('href', '<?php echo BASE_URL; ?>admin/trader_export_excel?' + data.queryString);
+                    }
+                    if (exportPdf.length && typeof data.queryString !== 'undefined') {
+                        exportPdf.attr('href', '<?php echo BASE_URL; ?>admin/trader_export_pdf?' + data.queryString);
+                    }
+                    var newUrl = '<?php echo BASE_URL; ?>admin/traders' + (query ? '?' + query : '');
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+                },
+                error: function() {
+                    if (tbody.length) tbody.css('opacity', '1');
+                }
+            });
+        }
+
+        btn.on('click', doFilter);
+        form.find('input[type="text"]').on('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                doFilter();
+            }
+        });
+    })();
+});
+</script>
+
 
 
 

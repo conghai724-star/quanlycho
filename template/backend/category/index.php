@@ -320,4 +320,329 @@
 </div>
 
 <!-- Nạp script bổ sung -->
-<script src="<?php echo BASE_URL; ?>public/assets/js/pages/admin/category.js"></script>
+<script>
+$(document).ready(function() {
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+    const csrfToken = '<?php echo $_SESSION['csrf_token'] ?? ''; ?>';
+
+    // Đăng ký namespace App.category
+    window.App = window.App || {};
+    window.App.category = {
+        switchTab: function(tabName) {
+            $('input[name="category-tab"][value="' + tabName + '"]').prop('checked', true);
+            $('.category-section').hide();
+            $('#cat-' + tabName).show();
+        },
+        openEditModal: async function(type, id) {
+            if (!type || !id) return;
+
+            App.alert.loading('Đang tải thông tin danh mục...');
+            
+            try {
+                const response = await fetch('<?php echo BASE_URL; ?>api/getCategoryDetail?type=' + type + '&id=' + id);
+                const resData = await response.json();
+                Swal.close();
+
+                if (!resData || resData.status !== 200) {
+                    App.alert.error('Lỗi', resData ? resData.message : 'Không thể tải thông tin.');
+                    return;
+                }
+
+                const data = resData.data;
+                const { title, html } = getModalFields(type, data);
+
+                const result = await Swal.fire({
+                    title: title,
+                    html: html,
+                    showCancelButton: true,
+                    confirmButtonText: 'Cập nhật',
+                    cancelButtonText: 'Hủy bỏ',
+                    confirmButtonColor: '#1ABB9C',
+                    cancelButtonColor: '#a0aec0',
+                    background: isDarkTheme ? '#1a2332' : '#ffffff',
+                    color: isDarkTheme ? '#ffffff' : '#0f1623',
+                    preConfirm: () => {
+                        const fd = new FormData();
+                        fd.append('id', id);
+                        fd.append('type', type);
+                        fd.append('csrf_token', csrfToken);
+
+                        if (type === 'area') {
+                            const areaName = document.getElementById('swal-area_name').value.trim();
+                            if (!areaName) {
+                                Swal.showValidationMessage('Tên khu vực không được để trống.');
+                                return false;
+                            }
+                            fd.append('area_name', areaName);
+                            fd.append('block', document.getElementById('swal-block').value.trim());
+                            fd.append('lot', document.getElementById('swal-lot').value.trim());
+                            fd.append('description', document.getElementById('swal-description').value.trim());
+                        } else {
+                            const code = document.getElementById('swal-code').value.trim();
+                            const name = document.getElementById('swal-name').value.trim();
+                            if (!code || !name) {
+                                Swal.showValidationMessage('Vui lòng nhập đầy đủ thông tin bắt buộc.');
+                                return false;
+                            }
+                            if (type === 'stall_type') {
+                                fd.append('type_code', code);
+                                fd.append('type_name', name);
+                            } else if (type === 'business_line') {
+                                fd.append('line_code', code);
+                                fd.append('line_name', name);
+                            } else if (type === 'document_type') {
+                                fd.append('type_code', code);
+                                fd.append('type_name', name);
+                            }
+                            fd.append('description', document.getElementById('swal-description').value.trim());
+                        }
+                        return fd;
+                    }
+                });
+
+                if (result.isConfirmed && result.value) {
+                    App.alert.loading('Đang lưu thay đổi...');
+                    // App.utils.apiPost('<?php echo BASE_URL; ?>api/editCategory', result.value, { onSuccess: () => { location.reload(); } });
+                    $.ajax({
+                        type: "POST",
+                        url: '<?php echo BASE_URL; ?>api/editCategory',
+                        data: result.value,
+                        processData: false,
+                        contentType: false,
+                        dataType: 'json',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        success: function(data) {
+                            Swal.close();
+                            if (data.status === 200) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Thành công',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false,
+                                    background: swalBg,
+                                    color: swalColor
+                                }).then(function() {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'Thất bại', text: data.message, background: swalBg, color: swalColor });
+                            }
+                        },
+                        error: function() {
+                            Swal.close();
+                            Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra trong quá trình xử lý.', background: swalBg, color: swalColor });
+                        }
+                    });
+                }
+            } catch (error) {
+                Swal.close();
+                App.alert.error('Lỗi', error.message || 'Lỗi kết nối mạng.');
+            }
+        }
+    };
+
+    function getModalFields(type, data = null) {
+        let html = '';
+        let title = data ? 'Cập Nhật Danh Mục' : 'Thêm Danh Mục Mới';
+
+        if (type === 'area') {
+            title = data ? 'Sửa Khu Vực Chợ' : 'Thêm Khu Vực Chợ Mới';
+            html = `
+                <div style="text-align: left; font-size: 13px;">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-weight: 500;">Tên khu vực <span style="color: var(--red)">*</span></label>
+                        <input type="text" id="swal-area_name" class="form-control" placeholder="Ví dụ: Khu A" value="${data ? data.area_name : ''}" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight: 500;">Dãy (Block)</label>
+                            <input type="text" id="swal-block" class="form-control" placeholder="Ví dụ: Dãy A1" value="${data && data.block ? data.block : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" style="font-weight: 500;">Lô số (Lot)</label>
+                            <input type="text" id="swal-lot" class="form-control" placeholder="Ví dụ: Lô 01-10" value="${data && data.lot ? data.lot : ''}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 500;">Mô tả chi tiết</label>
+                        <textarea id="swal-description" class="form-control" rows="3" placeholder="Nhập mô tả khu vực...">${data && data.description ? data.description : ''}</textarea>
+                    </div>
+                </div>
+            `;
+        } else {
+            let codeLabel = '';
+            let nameLabel = '';
+            let codePlaceholder = '';
+            let namePlaceholder = '';
+            let codeVal = '';
+            let nameVal = '';
+            let descVal = data && data.description ? data.description : '';
+
+            if (type === 'stall_type') {
+                title = data ? 'Sửa Loại Sạp Chợ' : 'Thêm Loại Sạp Chợ Mới';
+                codeLabel = 'Mã loại sạp';
+                nameLabel = 'Tên loại sạp';
+                codePlaceholder = 'Ví dụ: kiot, quay_hang';
+                namePlaceholder = 'Ví dụ: Kiot, Quầy hàng';
+                codeVal = data ? data.type_code : '';
+                nameVal = data ? data.type_name : '';
+            } else if (type === 'business_line') {
+                title = data ? 'Sửa Ngành Hàng' : 'Thêm Ngành Hàng Mới';
+                codeLabel = 'Mã ngành hàng';
+                nameLabel = 'Tên ngành hàng';
+                codePlaceholder = 'Ví dụ: thoi_trang, hai_san';
+                namePlaceholder = 'Ví dụ: Thời trang, Hải sản';
+                codeVal = data ? data.line_code : '';
+                nameVal = data ? data.line_name : '';
+            } else if (type === 'document_type') {
+                title = data ? 'Sửa Loại Giấy Tờ' : 'Thêm Loại Giấy Tờ Mới';
+                codeLabel = 'Mã loại giấy tờ';
+                nameLabel = 'Tên loại giấy tờ';
+                codePlaceholder = 'Ví dụ: attp, suc_khoe';
+                namePlaceholder = 'Ví dụ: Giấy chứng nhận ATTP';
+                codeVal = data ? data.type_code : '';
+                nameVal = data ? data.type_name : '';
+            }
+
+            html = `
+                <div style="text-align: left; font-size: 13px;">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-weight: 500;">${codeLabel} <span style="color: var(--red)">*</span></label>
+                        <input type="text" id="swal-code" class="form-control" placeholder="${codePlaceholder}" value="${codeVal}" readonly style="background-color: var(--bg-surface-secondary);" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-weight: 500;">${nameLabel} <span style="color: var(--red)">*</span></label>
+                        <input type="text" id="swal-name" class="form-control" placeholder="${namePlaceholder}" value="${nameVal}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-weight: 500;">Mô tả chi tiết</label>
+                        <textarea id="swal-description" class="form-control" rows="3" placeholder="Nhập mô tả...">${descVal}</textarea>
+                    </div>
+                </div>
+            `;
+        }
+
+        return { title, html };
+    }
+
+    // Đăng ký tự động thêm mới bằng hàm dùng chung handleFormSubmit
+    // ['area', 'stall_type', 'business_line', 'document_type'].forEach(function(type) { App.utils.handleFormSubmit('form-add-' + type, '<?php echo BASE_URL; ?>admin/categories'); });
+    ['area', 'stall_type', 'business_line', 'document_type'].forEach(function(type) {
+        $('#form-add-' + type).on('submit', function(e) {
+            e.preventDefault();
+            var form = this;
+            var $form = $(this);
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            Swal.fire({
+                title: 'Đang lưu danh mục...',
+                allowOutsideClick: false,
+                background: swalBg,
+                color: swalColor,
+                didOpen: function() { Swal.showLoading(); }
+            });
+
+            App.utils.saveFormDraft('form-add-' + type);
+
+            $.ajax({
+                type: "POST",
+                url: $form.attr('action'),
+                data: new FormData(form),
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(data) {
+                    Swal.close();
+                    if (data.status === 200) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Thành công',
+                            text: data.message,
+                            timer: 1500,
+                            showConfirmButton: false,
+                            background: swalBg,
+                            color: swalColor
+                        }).then(function() {
+                            App.utils.clearFormDraft('form-add-' + type);
+                            window.location.href = '<?php echo BASE_URL; ?>admin/categories';
+                        });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Thất bại', text: data.message, background: swalBg, color: swalColor });
+                    }
+                },
+                error: function() {
+                    Swal.close();
+                    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra trong quá trình xử lý.', background: swalBg, color: swalColor });
+                }
+            });
+        });
+    });
+
+    // Đăng ký tự động xóa bằng hàm dùng chung initDelete
+    // App.utils.initDelete({ btnClass: 'btn-open-delete-cat', idAttr: 'catId', nameAttr: 'catName', label: 'danh mục', onSuccess: () => location.reload() });
+    $(document).on('click', '.btn-open-delete-cat', function(e) {
+        e.preventDefault();
+        var btn = this;
+        var id = $(btn).data('cat-id');
+        var name = $(btn).data('cat-name') || '';
+        var csrf = $('input[name="csrf_token"]').val() || '';
+
+        Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn có chắc chắn muốn xóa danh mục "' + name + '" không? Hành động này không thể hoàn tác.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy bỏ',
+            confirmButtonColor: '#d63939',
+            cancelButtonColor: '#626d7d',
+            background: swalBg,
+            color: swalColor
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Đang xử lý...',
+                    allowOutsideClick: false,
+                    background: swalBg,
+                    color: swalColor,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+                
+                $.ajax({
+                    type: 'POST',
+                    url: $(btn).data('url'),
+                    data: { id: id, csrf_token: csrf },
+                    dataType: 'json',
+                    success: function(data) {
+                        Swal.close();
+                        if (data.status === 200) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Thành công',
+                                text: data.message,
+                                timer: 1500,
+                                background: swalBg,
+                                color: swalColor
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Thất bại', text: data.message, background: swalBg, color: swalColor });
+                        }
+                    },
+                    error: function() {
+                        Swal.close();
+                        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra khi kết nối máy chủ.', background: swalBg, color: swalColor });
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+

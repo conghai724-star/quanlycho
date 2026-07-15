@@ -140,4 +140,81 @@
 <?php csrf_field(); ?>
 
 <!-- Nạp JS xử lý AJAX & Form ATTP -->
-<script src="<?php echo BASE_URL; ?>public/assets/js/pages/admin/foodsafety.js?v=<?php echo time(); ?>"></script>
+<script>
+$(document).ready(function() {
+    window.App = window.App || {};
+    window.App.foodsafety = {
+        // 1. Chuyển đổi tab
+        switchTab: function(mode) {
+            const docs = document.getElementById('fs-docs');
+            const inspections = document.getElementById('fs-inspections');
+            if (!docs || !inspections) return;
+
+            if (mode === 'docs') {
+                docs.style.display = 'block';
+                inspections.style.display = 'none';
+            } else {
+                docs.style.display = 'none';
+                inspections.style.display = 'block';
+            }
+        },
+
+        // 2. Xem ảnh/PDF giấy phép
+        viewCertificate: function(traderName, certNo, fileUrl) {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const swalBg = isDark ? '#1a2332' : '#ffffff';
+            const swalColor = isDark ? '#ffffff' : '#0f1623';
+            
+            let html = `
+                <div style="text-align: left; font-size: 13px;">
+                    <p><strong>Tiểu thương:</strong> ${traderName}</p>
+                    <p><strong>Số chứng nhận:</strong> ${certNo}</p>
+                    <p><strong>Bản scan đính kèm:</strong></p>
+                    <div style="text-align: center; margin-top: 10px;">
+            `;
+
+            if (fileUrl.endsWith('.pdf')) {
+                html += `<iframe src="<?php echo BASE_URL; ?>${fileUrl}" style="width:100%; height:350px; border:none;"></iframe>`;
+            } else {
+                html += `<img src="<?php echo BASE_URL; ?>${fileUrl}" style="max-width:100%; max-height:350px; border-radius:4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />`;
+            }
+            html += '</div></div>';
+
+            Swal.fire({
+                title: 'Giấy chứng nhận ATTP',
+                html: html,
+                confirmButtonText: 'Đóng',
+                confirmButtonColor: '#1ABB9C',
+                width: 600,
+                background: swalBg,
+                color: swalColor
+            });
+        },
+
+        // 3. Xóa giấy phép
+        deleteCertificate: function(id, number) {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const swalBg = isDark ? '#1a2332' : '#ffffff';
+            const swalColor = isDark ? '#ffffff' : '#0f1623';
+
+            Swal.fire({
+                title: 'Xóa giấy chứng nhận?',
+                text: "Bạn có chắc chắn muốn xóa giấy chứng nhận số '" + number + "' khỏi hệ thống?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Đồng ý xóa',
+                cancelButtonText: 'Hủy bỏ',
+                confirmButtonColor: '#EA4335',
+                cancelButtonColor: '#a0aec0',
+                background: swalBg,
+                color: swalColor
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '<?php echo BASE_URL; ?>admin/foodsafety_delete/' + id;
+                }
+            });
+        }
+    };
+});
+</script>
+

@@ -49,3 +49,7 @@ desktop.ini
 
 # Thư mục build assets
 /public/assets/js/dist/
+/thaokhao/
+
+# Excel exports
+/database/*.xls

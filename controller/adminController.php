@@ -439,6 +439,16 @@ class adminController {
     }
 
     /**
+     * Trang sơ đồ cây sạp chợ tương tác dành cho Admin
+     */
+    public function map_tree() {
+        $this->view('backend/map/tree', [
+            'title' => 'Sơ đồ Cây sạp chợ tương tác'
+        ]);
+    }
+
+
+    /**
      * Tạo tài khoản nhân viên mới (Mockup Form)
      */
     public function user_add() {

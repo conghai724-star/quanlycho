@@ -98,4 +98,169 @@
     </div>
 </div>
 
+<script>
+$(document).ready(function() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const swalBg = isDark ? '#1a2332' : '#ffffff';
+    const swalColor = isDark ? '#ffffff' : '#0f1623';
+
+    // Hàm phụ định dạng tiền tệ cục bộ bằng JS thuần
+    function formatCurrency(val) {
+        return Number(val).toLocaleString('vi-VN');
+    }
+
+    window.App = window.App || {};
+    window.App.finance = {
+        // 1. Tính toán hóa đơn tự động hàng loạt
+        simulateBillCalculation: function() {
+            App.alert.loading('Đang tính toán hóa đơn...');
+            
+            // App.utils.ajaxRequest('POST', '<?php echo BASE_URL; ?>api/simulateBills', {}, (res) => { ... });
+            $.ajax({
+                type: 'POST',
+                url: '<?php echo BASE_URL; ?>api/simulateBills',
+                data: JSON.stringify({}),
+                contentType: 'application/json',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': '<?php echo security::getToken(); ?>'
+                },
+                dataType: 'json',
+                success: function(res) {
+                    Swal.close();
+                    if (res.status === 200) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Đã lập hóa đơn thành công!',
+                            text: res.message,
+                            confirmButtonColor: '#1ABB9C',
+                            background: swalBg,
+                            color: swalColor
+                        }).then(() => { location.reload(); });
+                    } else {
+                        App.alert.error('Thất bại', res.message || 'Lỗi lập hóa đơn.');
+                    }
+                },
+                error: function() {
+                    Swal.close();
+                    App.alert.error('Lỗi', 'Không thể kết nối đến máy chủ.');
+                }
+            });
+        },
+
+        // 2. Xem chi tiết hóa đơn và thanh toán
+        viewBillDetails: function(billCode, stallCode, traderName) {
+            App.alert.loading('Đang tải chi tiết hóa đơn...');
+            
+            // App.utils.ajaxRequest('GET', '<?php echo BASE_URL; ?>api/getBillDetails?code=' + billCode, {}, (res) => { ... });
+            $.ajax({
+                type: 'GET',
+                url: '<?php echo BASE_URL; ?>api/getBillDetails?code=' + billCode,
+                dataType: 'json',
+                success: function(res) {
+                    Swal.close();
+                    if (res.error) {
+                        App.alert.error('Lỗi', res.error);
+                        return;
+                    }
+
+                    const d = res.data;
+                    const totalText = formatCurrency(d.total_amount) + ' đ';
+
+                    const html = `
+                        <div style="text-align: left; font-size: 13px;">
+                            <p><strong>Mã hóa đơn:</strong> ${billCode}</p>
+                            <p><strong>Sạp thuê:</strong> ${stallCode} - <strong>Khách hàng:</strong> ${traderName}</p>
+                            <table style="width:100%; border-collapse:collapse; margin-top:10px; font-size:12px;">
+                                <thead>
+                                    <tr style="background-color: var(--bg-surface-secondary); text-align: left;">
+                                        <th style="padding:6px; border:1px solid var(--border-color);">Khoản mục</th>
+                                        <th style="padding:6px; border:1px solid var(--border-color); text-align:right;">Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding:6px; border:1px solid var(--border-color);">Tiền thuê sạp</td>
+                                        <td style="padding:6px; border:1px solid var(--border-color); text-align:right;">${formatCurrency(d.rent_amount)} đ</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:6px; border:1px solid var(--border-color);">Tiền điện (${d.electricity_usage} kWh)</td>
+                                        <td style="padding:6px; border:1px solid var(--border-color); text-align:right;">${formatCurrency(d.electricity_amount)} đ</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:6px; border:1px solid var(--border-color);">Tiền nước (${d.water_usage} m³)</td>
+                                        <td style="padding:6px; border:1px solid var(--border-color); text-align:right;">${formatCurrency(d.water_amount)} đ</td>
+                                    </tr>
+                                    <tr style="font-weight:bold;">
+                                        <td style="padding:6px; border:1px solid var(--border-color);">Tổng cộng</td>
+                                        <td style="padding:6px; border:1px solid var(--border-color); text-align:right; color: var(--primary);">${totalText}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+
+                    Swal.fire({
+                        title: 'Chi tiết Hóa đơn',
+                        html: html,
+                        confirmButtonText: d.status === 'unpaid' ? 'Thanh toán hóa đơn này' : 'Đóng',
+                        showCancelButton: d.status === 'unpaid',
+                        cancelButtonText: 'Hủy',
+                        confirmButtonColor: d.status === 'unpaid' ? '#1ABB9C' : '#626d7d',
+                        cancelButtonColor: '#a0aec0',
+                        background: swalBg,
+                        color: swalColor
+                    }).then((r) => {
+                        if (r.isConfirmed && d.status === 'unpaid') {
+                            App.alert.loading('Đang xử lý thanh toán...');
+                            const fd = new FormData();
+                            fd.append('bill_id', d.id);
+                            fd.append('csrf_token', '<?php echo $_SESSION['csrf_token'] ?? ''; ?>');
+                            
+                            // App.utils.apiPost('<?php echo BASE_URL; ?>api/payBill', fd, { onSuccess: () => { location.reload(); } });
+                            $.ajax({
+                                type: "POST",
+                                url: '<?php echo BASE_URL; ?>api/payBill',
+                                data: fd,
+                                processData: false,
+                                contentType: false,
+                                dataType: 'json',
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                                success: function(data) {
+                                    Swal.close();
+                                    if (data.status === 200) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Thành công',
+                                            text: data.message,
+                                            timer: 1500,
+                                            showConfirmButton: false,
+                                            background: swalBg,
+                                            color: swalColor
+                                        }).then(function() {
+                                            location.reload();
+                                        });
+                                    } else {
+                                        Swal.fire({ icon: 'error', title: 'Thất bại', text: data.message, background: swalBg, color: swalColor });
+                                    }
+                                },
+                                error: function() {
+                                    Swal.close();
+                                    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra trong quá trình xử lý.', background: swalBg, color: swalColor });
+                                }
+                            });
+                        }
+                    });
+                },
+                error: function() {
+                    Swal.close();
+                    App.alert.error('Lỗi', 'Không thể kết nối đến máy chủ.');
+                }
+            });
+        }
+    };
+});
+</script>
+
+
 

@@ -103,4 +103,116 @@
 <?php csrf_field(); ?>
 
 <!-- Nạp JS xử lý AJAX & Form ATTP -->
-<script src="<?php echo BASE_URL; ?>public/assets/js/pages/admin/foodsafety.js?v=<?php echo time(); ?>"></script>
+<script>
+$(document).ready(function() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var swalBg = isDark ? '#1a2332' : '#ffffff';
+    var swalColor = isDark ? '#ffffff' : '#0f1623';
+
+    // 1. Submit form bằng AJAX
+    // App.utils.handleFormSubmit('form-add-cert', '<?php echo BASE_URL; ?>admin/foodsafety');
+    $('#form-add-cert').on('submit', function(e) {
+        e.preventDefault();
+        var form = this;
+        var $form = $(this);
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        Swal.fire({
+            title: 'Đang lưu chứng nhận...',
+            allowOutsideClick: false,
+            background: swalBg,
+            color: swalColor,
+            didOpen: function() { Swal.showLoading(); }
+        });
+
+        App.utils.saveFormDraft('form-add-cert');
+
+        $.ajax({
+            type: "POST",
+            url: $form.attr('action'),
+            data: new FormData(form),
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(data) {
+                Swal.close();
+                if (data.status === 200) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công',
+                        text: data.message,
+                        timer: 1500,
+                        showConfirmButton: false,
+                        background: swalBg,
+                        color: swalColor
+                    }).then(function() {
+                        App.utils.clearFormDraft('form-add-cert');
+                        window.location.href = '<?php echo BASE_URL; ?>admin/foodsafety';
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Thất bại', text: data.message, background: swalBg, color: swalColor });
+                }
+            },
+            error: function() {
+                Swal.close();
+                Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra trong quá trình xử lý.', background: swalBg, color: swalColor });
+            }
+        });
+    });
+
+    // Hàm phụ phục vụ kiểm tra trùng lặp thời gian thực bằng jQuery
+    function setupUniqueCheck(inputId, type, message) {
+        var input = document.getElementById(inputId);
+        if (!input || input.readOnly) return;
+        var $input = $(input);
+        var $errorEl = $input.parent().find('.realtime-error-msg');
+        if (!$errorEl.length) {
+            $errorEl = $('<small class="realtime-error-msg" style="color: #e74c3c; font-size: 11px; margin-top: 4px; display: none;"></small>');
+            $input.parent().append($errorEl);
+        }
+
+        $input.on('blur', function() {
+            var val = $input.val().trim();
+            if (!val) {
+                $errorEl.hide();
+                input.style.borderColor = '';
+                input.setCustomValidity('');
+                return;
+            }
+
+            $.ajax({
+                type: 'GET',
+                url: '<?php echo BASE_URL; ?>api/checkExists',
+                data: { type: type, value: val },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.exists) {
+                        $errorEl.text(message).show();
+                        input.style.borderColor = '#e74c3c';
+                        input.setCustomValidity(message);
+                    } else {
+                        $errorEl.hide();
+                        input.style.borderColor = '';
+                        input.setCustomValidity('');
+                    }
+                }
+            });
+        });
+
+        $input.on('input', function() {
+            $errorEl.hide();
+            input.style.borderColor = '';
+            input.setCustomValidity('');
+        });
+    }
+
+    // 2. Kiểm tra trùng số chứng nhận thời gian thực
+    // App.utils.initRealtimeUniqueCheck('doc_number', 'api/checkExists', { getParams: val => ({ type: 'doc_number', value: val }), message: 'Số giấy chứng nhận này đã tồn tại trên hệ thống.' });
+    setupUniqueCheck('doc_number', 'doc_number', 'Số giấy chứng nhận này đã tồn tại trên hệ thống.');
+});
+</script>
+

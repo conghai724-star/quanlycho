@@ -127,3 +127,104 @@
     </div>
 </div>
 
+<script>
+$(document).ready(function() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const swalBg = isDark ? '#1a2332' : '#ffffff';
+    const swalColor = isDark ? '#ffffff' : '#0f1623';
+
+    window.App = window.App || {};
+    window.App.user = {
+        // 1. Chuyển tab giữa Tài khoản và Nhật ký
+        switchTab: function(mode) {
+            const accounts = document.getElementById('user-accounts');
+            const logs = document.getElementById('user-logs');
+            if (!accounts || !logs) return;
+
+            if (mode === 'accounts') {
+                accounts.style.display = 'block';
+                logs.style.display = 'none';
+            } else {
+                accounts.style.display = 'none';
+                logs.style.display = 'block';
+            }
+        },
+
+    // 2. Khóa / Mở khóa tài khoản
+        toggleLockUser: function(id, name) {
+            Swal.fire({
+                title: 'Khóa/Mở khóa tài khoản?',
+                text: "Xác nhận thay đổi trạng thái hoạt động của tài khoản '" + name + "'?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Đồng ý',
+                cancelButtonText: 'Hủy bỏ',
+                confirmButtonColor: '#EA4335',
+                cancelButtonColor: '#a0aec0',
+                background: swalBg,
+                color: swalColor
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // App.utils.ajaxRequest('POST', '<?php echo BASE_URL; ?>admin/user_toggle_status/' + id, {}, (res) => { ... });
+                    $.ajax({
+                        type: 'POST',
+                        url: '<?php echo BASE_URL; ?>admin/user_toggle_status/' + id,
+                        data: JSON.stringify({}),
+                        contentType: 'application/json',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': '<?php echo security::getToken(); ?>'
+                        },
+                        dataType: 'json',
+                        success: function(res) {
+                            if (res.success) {
+                                const statusCol = document.getElementById('status-col-' + id);
+                                if (res.new_status === 1) {
+                                    statusCol.innerHTML = '<span class="status status-green">Hoạt động</span>';
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Đã kích hoạt lại tài khoản!',
+                                        confirmButtonColor: '#1ABB9C',
+                                        background: swalBg,
+                                        color: swalColor
+                                    });
+                                } else {
+                                    statusCol.innerHTML = '<span class="status status-red">Bị khóa</span>';
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Đã khóa tài khoản!',
+                                        confirmButtonColor: '#1ABB9C',
+                                        background: swalBg,
+                                        color: swalColor
+                                    });
+                                }
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Thao tác thất bại!',
+                                    text: res.message || 'Có lỗi xảy ra.',
+                                    confirmButtonColor: '#EA4335',
+                                    background: swalBg,
+                                    color: swalColor
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Thao tác thất bại!',
+                                text: 'Không thể kết nối đến máy chủ.',
+                                confirmButtonColor: '#EA4335',
+                                background: swalBg,
+                                color: swalColor
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    };
+});
+</script>
+
+

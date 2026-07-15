@@ -249,4 +249,98 @@
     </div>
 </div>
 
+<!-- Nạp thư viện Chart.js & Script vẽ biểu đồ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    const canvasRevenue = document.getElementById('revenueChart');
+    const canvasStalls = document.getElementById('stallsPieChart');
+    if (!canvasRevenue || !canvasStalls) return;
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // 1. Lấy dữ liệu doanh thu qua AJAX và vẽ biểu đồ cột
+    fetch(window.BASE_URL + 'api/getRevenueData')
+        .then(response => response.json())
+        .then(data => {
+            const revMillions = data.revenue.map(val => val / 1000000);
+            const expMillions = data.expense.map(val => val / 1000000);
+            const ctx = canvasRevenue.getContext('2d');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: 'Tổng thu',
+                            data: revMillions,
+                            backgroundColor: '#1ABB9C',
+                            borderRadius: 4,
+                            barPercentage: 0.5
+                        },
+                        {
+                            label: 'Tổng chi',
+                            data: expMillions,
+                            backgroundColor: '#FBBC04',
+                            borderRadius: 4,
+                            barPercentage: 0.5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: isDark ? '#2a3649' : '#eceff1' },
+                            ticks: { color: isDark ? '#a0aec0' : '#6b7280' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: isDark ? '#a0aec0' : '#6b7280' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                boxWidth: 15,
+                                color: isDark ? '#e2e8f0' : '#111827',
+                                font: { family: 'Inter', size: 12 }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+    // 2. Vẽ biểu đồ tròn phân bổ sạp chợ (đọc từ data-attributes)
+    const rented = parseInt(canvasStalls.dataset.rented || 0, 10);
+    const empty = parseInt(canvasStalls.dataset.empty || 0, 10);
+    const repairing = parseInt(canvasStalls.dataset.repairing || 0, 10);
+
+    new Chart(canvasStalls.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Đã thuê', 'Trống', 'Đang sửa'],
+            datasets: [{
+                data: [rented, empty, repairing],
+                backgroundColor: ['#34A853', '#FBBC04', '#EA4335'],
+                borderWidth: 2,
+                borderColor: isDark ? '#1a2332' : '#ffffff',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { legend: { display: false } }
+        }
+    });
+});
+</script>
+
+
 

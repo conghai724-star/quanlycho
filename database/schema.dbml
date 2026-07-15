@@ -1,0 +1,336 @@
+Project QuanLyCho {
+  database_type: 'MySQL'
+  Note: 'Hệ thống Quản lý Chợ (quanly_cho) với kiến trúc phân quyền RBAC, Đa Chợ (Multi-market) và Quản lý Trạng thái tập trung.'
+}
+
+// ────────────────────────────────────────────────────────────────
+// 1. HỆ THỐNG & PHÂN QUYỀN
+// ────────────────────────────────────────────────────────────────
+
+Table status_colors {
+  id int [pk, increment]
+  color_class varchar(50) [not null, unique, note: 'Mã lớp CSS hiển thị (status-green, status-red, status-orange...)']
+  description varchar(100) [null, note: 'Ý nghĩa nhóm màu']
+}
+
+Table system_statuses {
+  id int [pk, increment]
+  domain varchar(50) [not null, note: 'Phân hệ sở hữu (user, stall, trader, contract, bill, attp...)']
+  code varchar(50) [not null, note: 'Mã trạng thái kỹ thuật (active, empty, rented, paid...)']
+  status_name varchar(100) [not null, note: 'Tên hiển thị tiếng Việt']
+  color_id int [null]
+  
+  Note: 'Từ điển trạng thái tập trung'
+}
+
+Table roles {
+  id int [pk, increment]
+  role_code varchar(50) [not null, unique, note: 'Mã vai trò (admin, staff, accountant, manager...)']
+  role_name varchar(100) [not null, note: 'Tên vai trò tiếng Việt']
+  description text [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table permissions {
+  id int [pk, increment]
+  permission_code varchar(100) [not null, unique, note: 'Mã quyền chi tiết (trader_create, stall_edit...)']
+  permission_name varchar(150) [not null, note: 'Tên mô tả quyền hạn']
+  module_group varchar(50) [not null, note: 'Phân nhóm nghiệp vụ']
+  description text [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table role_permissions {
+  role_id int [pk]
+  permission_id int [pk]
+}
+
+Table users {
+  id int [pk, increment]
+  username varchar(50) [not null, unique, note: 'Tên đăng nhập']
+  password varchar(255) [not null, note: 'Mật khẩu đã mã hóa']
+  fullname varchar(100) [not null, note: 'Họ và tên nhân viên BQL']
+  email varchar(100) [null]
+  is_active tinyint(1) [not null, default: 1, note: '1: Hoạt động, 0: Bị khóa']
+  user_group int [not null, default: 2]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table user_roles {
+  user_id int [pk]
+  role_id int [pk]
+}
+
+Table system_logs {
+  id int [pk, increment]
+  user_id int [null]
+  action_type varchar(50) [not null, note: 'login, logout, create, update, delete...']
+  action_description text [not null]
+  ip_address varchar(45) [null]
+  user_agent text [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ────────────────────────────────────────────────────────────────
+// 2. PHÂN HỆ CẤU TRÚC ĐA CHỢ & MẶT BẰNG
+// ────────────────────────────────────────────────────────────────
+
+Table markets {
+  id int [pk, increment]
+  market_code varchar(50) [not null, unique, note: 'Mã chợ (CHO_BT, CHO_AD...)']
+  name varchar(150) [not null, note: 'Tên chợ']
+  phone varchar(20) [null]
+  email varchar(100) [null]
+  manager_name varchar(100) [null, note: 'Trưởng BQL']
+  logo varchar(255) [null]
+  province_id int [null]
+  district_id int [null]
+  ward_id int [null]
+  latitude decimal(10,8) [null]
+  longitude decimal(11,8) [null]
+  status_code varchar(50) [default: 'active']
+  created_by int [null]
+  updated_by int [null]
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+  updated_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table user_markets {
+  id int [pk, increment]
+  user_id int [not null]
+  market_id int [not null]
+  role_id int [not null, note: 'Vai trò cụ thể của nhân viên tại chợ được gán']
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table areas {
+  id int [pk, increment]
+  market_id int [not null]
+  area_name varchar(100) [not null, unique, note: 'Tên khu (Khu A, Khu B...)']
+  block varchar(50) [null, note: 'Dãy']
+  lot varchar(50) [null, note: 'Lô số']
+  description text [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table stalls {
+  id int [pk, increment]
+  area_id int [not null]
+  stall_code varchar(50) [not null, unique, note: 'Mã sạp duy nhất (SẠP-A01...)']
+  block varchar(50) [null, note: 'Dãy vị trí']
+  lot varchar(50) [null, note: 'Lô vị trí']
+  stall_type varchar(100) [not null, default: 'Quầy hàng', note: 'Kiot, Quầy hàng, Mặt bằng trống...']
+  area_size decimal(10,2) [not null, note: 'Diện tích (m2)']
+  base_price decimal(15,2) [not null, note: 'Đơn giá nền/tháng']
+  status_id int [not null, default: 3, note: 'FK -> system_statuses(id)']
+  map_coordinate_x int [null]
+  map_coordinate_y int [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table business_lines {
+  id int [pk, increment]
+  line_code varchar(50) [not null, unique]
+  line_name varchar(100) [not null, note: 'Tên ngành hàng (Quần áo, Thực phẩm...)']
+  description text [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table traders {
+  id int [pk, increment]
+  trader_code varchar(50) [not null, unique, note: 'Mã tiểu thương (TT-001...)']
+  fullname varchar(100) [not null]
+  phone varchar(15) [not null]
+  cccd varchar(20) [not null, unique]
+  business_line_id int [null]
+  address text [null]
+  description text [null]
+  license_file text [null, note: 'Đường dẫn file đính kèm dạng JSON array']
+  status_id int [not null, note: 'FK -> system_statuses(id)']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ────────────────────────────────────────────────────────────────
+// 3. PHÂN HỆ HỢP ĐỒNG THUÊ SẠP
+// ────────────────────────────────────────────────────────────────
+
+Table contracts {
+  id int [pk, increment]
+  trader_id int [not null]
+  stall_id int [not null]
+  contract_number varchar(100) [not null, unique]
+  name varchar(255) [not null, note: 'Tên hợp đồng']
+  description text [null]
+  contract_file varchar(255) [null, note: 'File scan hợp đồng PDF']
+  start_date date [not null]
+  end_date date [not null]
+  deposit decimal(15,2) [not null, default: 0, note: 'Tiền đặt cọc']
+  status_id int [not null, default: 11]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table contract_appendices {
+  id int [pk, increment]
+  contract_id int [not null]
+  appendix_number varchar(100) [not null, unique]
+  name varchar(255) [not null]
+  sign_date date [not null]
+  effect_date date [not null]
+  content text [not null, note: 'Điều khoản thay đổi']
+  file varchar(255) [null, note: 'File đính kèm']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ────────────────────────────────────────────────────────────────
+// 4. PHÂN HỆ TIỆN ÍCH & TÀI CHÍNH
+// ────────────────────────────────────────────────────────────────
+
+Table utility_readings {
+  id int [pk, increment]
+  stall_id int [not null]
+  reading_date date [not null]
+  electric_old int [not null, note: 'Chỉ số điện cũ']
+  electric_new int [not null, note: 'Chỉ số điện mới']
+  water_old int [not null, note: 'Chỉ số nước cũ']
+  water_new int [not null, note: 'Chỉ số nước mới']
+  created_by int [not null, note: 'Nhân viên ghi chỉ số']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table bills {
+  id int [pk, increment]
+  contract_id int [not null]
+  bill_code varchar(50) [not null, unique]
+  invoice_date date [not null, note: 'Ngày xuất hóa đơn']
+  due_date date [not null, note: 'Hạn nộp tiền']
+  rent_amount decimal(15,2) [not null, default: 0, note: 'Tiền thuê sạp']
+  electric_amount decimal(15,2) [not null, default: 0]
+  water_amount decimal(15,2) [not null, default: 0]
+  management_fee decimal(15,2) [not null, default: 0]
+  sanitation_fee decimal(15,2) [not null, default: 0]
+  security_fee decimal(15,2) [not null, default: 0]
+  other_fee decimal(15,2) [not null, default: 0]
+  total_amount decimal(15,2) [not null, default: 0, note: 'Tổng tiền phải đóng']
+  paid_amount decimal(15,2) [not null, default: 0, note: 'Số tiền thực tế đã đóng']
+  status varchar(20) [not null, default: 'unpaid', note: 'unpaid, partially_paid, paid']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table receipts_payments {
+  id int [pk, increment]
+  transaction_code varchar(50) [not null, unique, note: 'Số phiếu PT-xxx, PC-xxx']
+  type varchar(10) [not null, note: 'receipt: Thu, payment: Chi']
+  amount decimal(15,2) [not null]
+  transaction_date date [not null]
+  category varchar(100) [not null, note: 'Danh mục Thu/Chi (Tiền thuê sạp, Lương...)']
+  note text [null]
+  reference_id int [null, note: 'Liên kết hóa đơn bills(id) nếu có']
+  market_id int [null, note: 'Chợ thực hiện thu chi']
+  created_by int [not null, note: 'Nhân viên lập phiếu']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ────────────────────────────────────────────────────────────────
+// 5. PHÂN HỆ VỆ SINH AN TOÀN THỰC PHẨM
+// ────────────────────────────────────────────────────────────────
+
+Table trader_attp {
+  id int [pk, increment]
+  trader_id int [not null]
+  doc_type varchar(50) [not null, note: 'ATTP, Health, Training']
+  doc_number varchar(100) [not null, note: 'Số chứng nhận']
+  name varchar(255) [not null, note: 'Tên giấy chứng nhận']
+  description text [null]
+  file varchar(255) [null, note: 'Đường dẫn file ảnh/PDF']
+  status_id int [not null, default: 18, note: 'FK -> system_statuses(id)']
+  issuer varchar(150) [null, note: 'Cơ quan cấp']
+  issue_date date [not null]
+  expiry_date date [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table food_safety_inspections {
+  id int [pk, increment]
+  market_id int [not null]
+  inspection_title varchar(255) [not null, note: 'Tên đợt thanh tra']
+  inspection_team varchar(255) [not null, note: 'Đoàn kiểm tra']
+  planned_date date [not null]
+  actual_date date [null]
+  status varchar(20) [not null, default: 'planned', note: 'planned, completed, cancelled']
+  notes text [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+Table food_safety_violations {
+  id int [pk, increment]
+  trader_id int [not null]
+  inspection_id int [null]
+  violation_code varchar(50) [not null, unique, note: 'Mã biên bản BBVP-xxx']
+  violation_date date [not null]
+  description text [not null, note: 'Hành vi vi phạm']
+  penalty_measure text [not null, note: 'Hình thức xử lý']
+  status varchar(20) [not null, default: 'pending', note: 'pending, resolved']
+  resolved_date date [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`]
+}
+
+// ────────────────────────────────────────────────────────────────
+// 6. PHẦN TỬ SƠ ĐỒ CHỢ TƯƠNG TÁC
+// ────────────────────────────────────────────────────────────────
+
+Table market_map_elements {
+  id int [pk, increment]
+  element_type varchar(50) [not null, note: 'stall, gate, door, street, utility, text']
+  element_name varchar(100) [null]
+  stall_id int [null, unique]
+  pos_x int [not null, default: 100]
+  pos_y int [not null, default: 100]
+  width int [not null, default: 80]
+  height int [not null, default: 60]
+  rotation int [not null, default: 0, note: 'Góc xoay (0, 90, 180, 270)']
+  color varchar(20) [null, note: 'Mã màu Hex nếu có']
+}
+
+// ────────────────────────────────────────────────────────────────
+// RÀNG BUỘC QUAN HỆ (RELATIONSHIPS)
+// ────────────────────────────────────────────────────────────────
+
+Ref: system_statuses.color_id > status_colors.id [delete: restrict]
+Ref: role_permissions.role_id > roles.id [delete: cascade]
+Ref: role_permissions.permission_id > permissions.id [delete: cascade]
+Ref: user_roles.user_id > users.id [delete: cascade]
+Ref: user_roles.role_id > roles.id [delete: cascade]
+Ref: user_markets.user_id > users.id [delete: cascade]
+Ref: user_markets.market_id > markets.id
+Ref: user_markets.role_id > roles.id
+Ref: areas.market_id > markets.id
+Ref: stalls.area_id > areas.id [delete: cascade]
+Ref: stalls.status_id > system_statuses.id [delete: restrict]
+Ref: traders.status_id > system_statuses.id [delete: restrict]
+Ref: traders.business_line_id > business_lines.id [delete: set null]
+Ref: contracts.trader_id > traders.id [delete: restrict]
+Ref: contracts.stall_id > stalls.id [delete: restrict]
+Ref: contracts.status_id > system_statuses.id
+Ref: contract_appendices.contract_id > contracts.id [delete: cascade]
+Ref: utility_readings.stall_id > stalls.id [delete: cascade]
+Ref: utility_readings.created_by > users.id [delete: restrict]
+Ref: bills.contract_id > contracts.id [delete: cascade]
+Ref: receipts_payments.reference_id > bills.id
+Ref: receipts_payments.market_id > markets.id
+Ref: receipts_payments.created_by > users.id [delete: restrict]
+Ref: trader_attp.trader_id > traders.id [delete: cascade]
+Ref: trader_attp.status_id > system_statuses.id
+Ref: food_safety_inspections.market_id > markets.id
+Ref: food_safety_violations.trader_id > traders.id [delete: cascade]
+Ref: food_safety_violations.inspection_id > food_safety_inspections.id [delete: set null]
+Ref: system_logs.user_id > users.id [delete: set null]
+Ref: market_map_elements.stall_id - stalls.id [delete: set null]

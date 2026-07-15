@@ -43,7 +43,11 @@ class categoryModel {
             $orderBy = 'type_name ASC';
         }
         
-        $sql = "SELECT * FROM `{$table}` ORDER BY {$orderBy}";
+        $sql = "SELECT * FROM `{$table}`";
+        if ($categoryKey === 'area') {
+            $sql = marketService::applyScope($sql);
+        }
+        $sql .= " ORDER BY {$orderBy}";
         return $this->db->select($sql);
     }
 
@@ -53,6 +57,9 @@ class categoryModel {
     public function getItemById($categoryKey, $id) {
         $table = $this->getTableName($categoryKey);
         $sql = "SELECT * FROM `{$table}` WHERE id = :id";
+        if ($categoryKey === 'area') {
+            $sql = marketService::applyScope($sql);
+        }
         return $this->db->selectOne($sql, ['id' => $id]);
     }
 
@@ -62,6 +69,13 @@ class categoryModel {
     public function createItem($categoryKey, $data) {
         $table = $this->getTableName($categoryKey);
         
+        if ($categoryKey === 'area') {
+            if (empty($data['market_id'])) {
+                $data['market_id'] = marketService::currentMarketId();
+            }
+            marketService::checkWritePermission($data['market_id']);
+        }
+
         $fields = array_keys($data);
         $placeholders = array_map(function($f) { return ":{$f}"; }, $fields);
         
@@ -76,6 +90,20 @@ class categoryModel {
     public function updateItem($categoryKey, $id, $data) {
         $table = $this->getTableName($categoryKey);
         
+        if ($categoryKey === 'area') {
+            // Kiểm tra quyền đối với bản ghi cũ
+            $oldItem = $this->getItemById('area', $id);
+            if (!$oldItem) {
+                throw new Exception("Khu vực không tồn tại hoặc bạn không có quyền truy cập.");
+            }
+            marketService::checkWritePermission($oldItem['market_id']);
+
+            // Nếu muốn cập nhật market_id mới, kiểm tra quyền đối với chợ mới
+            if (isset($data['market_id'])) {
+                marketService::checkWritePermission($data['market_id']);
+            }
+        }
+
         $setParts = [];
         foreach ($data as $field => $val) {
             $setParts[] = "`{$field}` = :{$field}";
@@ -93,8 +121,13 @@ class categoryModel {
     public function deleteItem($categoryKey, $id) {
         $table = $this->getTableName($categoryKey);
         
-        // Kiểm tra ràng buộc trước khi xóa
         if ($categoryKey === 'area') {
+            $oldItem = $this->getItemById('area', $id);
+            if (!$oldItem) {
+                throw new Exception("Khu vực không tồn tại hoặc bạn không có quyền truy cập.");
+            }
+            marketService::checkWritePermission($oldItem['market_id']);
+
             // Kiểm tra xem có sạp nào đang thuộc khu vực này không
             $sqlCheck = "SELECT COUNT(*) as count FROM stalls WHERE area_id = :id";
             $res = $this->db->selectOne($sqlCheck, ['id' => $id]);
@@ -135,6 +168,9 @@ class categoryModel {
         $table = $this->getTableName($categoryKey);
         
         $sql = "SELECT COUNT(*) as count FROM `{$table}` WHERE `{$field}` = :value";
+        if ($categoryKey === 'area') {
+            $sql = marketService::applyScope($sql);
+        }
         $params = ['value' => $value];
         if ($excludeId !== null) {
             $sql .= " AND id != :excludeId";
