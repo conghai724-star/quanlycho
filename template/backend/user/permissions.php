@@ -290,9 +290,12 @@
             // Vô hiệu hóa tạm thời để tránh bấm loạn xạ khi đang gọi AJAX
             input.prop('disabled', true);
 
-            $.ajax({
+             $.ajax({
                 url: '<?php echo BASE_URL; ?>system/save_permissions',
                 type: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '<?php echo security::getToken(); ?>'
+                },
                 data: {
                     user_id: userId,
                     market_id: marketId,

@@ -21,6 +21,7 @@
             <?php endif; ?>
 
             <form method="POST" action="<?php echo BASE_URL; ?>system/market_add">
+                <?php csrf_field(); ?>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
                     <!-- Tên chợ -->
                     <div>

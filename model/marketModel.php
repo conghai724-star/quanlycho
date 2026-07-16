@@ -46,7 +46,7 @@ class marketModel {
             'status_code'  => $data['status_code'] ?? 'active'
         ]);
         
-        return $this->db->getLastInsertId();
+        return $this->db->lastInsertId();
     }
 
     /**
