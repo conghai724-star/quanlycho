@@ -402,82 +402,84 @@
             rentedStalls += <?php echo (int)$m['rented_stalls']; ?>;
         <?php endforeach; ?>
 
-        // Khởi tạo Bar Chart
-        var ctxBar = document.getElementById('revenueBarChart').getContext('2d');
-        new Chart(ctxBar, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Doanh thu thực tế (VNĐ)',
-                    data: revenueData,
-                    backgroundColor: [
-                        'rgba(58, 123, 213, 0.7)',
-                        'rgba(26, 187, 156, 0.7)',
-                        'rgba(251, 188, 4, 0.7)',
-                        'rgba(155, 89, 182, 0.7)'
-                    ],
-                    borderColor: [
-                        '#3a7bd5',
-                        '#1ABB9C',
-                        '#FBBC04',
-                        '#9b59b6'
-                    ],
-                    borderWidth: 1.5,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+        if (typeof Chart !== 'undefined') {
+            // Khởi tạo Bar Chart
+            var ctxBar = document.getElementById('revenueBarChart').getContext('2d');
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Doanh thu thực tế (VNĐ)',
+                        data: revenueData,
+                        backgroundColor: [
+                            'rgba(58, 123, 213, 0.7)',
+                            'rgba(26, 187, 156, 0.7)',
+                            'rgba(251, 188, 4, 0.7)',
+                            'rgba(155, 89, 182, 0.7)'
+                        ],
+                        borderColor: [
+                            '#3a7bd5',
+                            '#1ABB9C',
+                            '#FBBC04',
+                            '#9b59b6'
+                        ],
+                        borderWidth: 1.5,
+                        borderRadius: 8
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString() + ' đ';
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + ' đ';
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
 
-        // Khởi tạo Pie Chart
-        var ctxPie = document.getElementById('occupancyPieChart').getContext('2d');
-        var emptyStalls = totalStalls - rentedStalls;
-        new Chart(ctxPie, {
-            type: 'doughnut',
-            data: {
-                labels: ['Sạp đã thuê', 'Sạp còn trống'],
-                datasets: [{
-                    data: [rentedStalls, emptyStalls],
-                    backgroundColor: ['#2ecc71', '#bdc3c7'],
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 15,
-                            font: {
-                                family: "'Outfit', sans-serif",
-                                size: 12
+            // Khởi tạo Pie Chart
+            var ctxPie = document.getElementById('occupancyPieChart').getContext('2d');
+            var emptyStalls = totalStalls - rentedStalls;
+            new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Sạp đã thuê', 'Sạp còn trống'],
+                    datasets: [{
+                        data: [rentedStalls, emptyStalls],
+                        backgroundColor: ['#2ecc71', '#bdc3c7'],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 15,
+                                font: {
+                                    family: "'Outfit', sans-serif",
+                                    size: 12
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // 2. Click nút "Vào quản trị chợ"
         $('.btn-access').on('click', function() {

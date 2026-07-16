@@ -340,9 +340,14 @@ window.App = Object.assign(window.App || {}, {
     // 1. Module Thống kê (Dashboard)
     dashboard: {
         initCharts() {
-            const canvasRevenue = document.getElementById('revenueChart');
+             const canvasRevenue = document.getElementById('revenueChart');
             const canvasStalls = document.getElementById('stallsPieChart');
             if (!canvasRevenue || !canvasStalls) return;
+
+            // Nếu đã khởi tạo rồi (bằng inline script ở trang view) thì bỏ qua
+            if (Chart.getChart && (Chart.getChart(canvasRevenue) || Chart.getChart(canvasStalls))) {
+                return;
+            }
 
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
