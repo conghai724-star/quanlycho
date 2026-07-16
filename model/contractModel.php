@@ -12,7 +12,7 @@ class contractModel {
     /**
      * Lấy toàn bộ danh sách hợp đồng
      */
-    public function getAll($status = null, $search = null) {
+    public function getAll($status = null, $search = null, $marketId = null) {
         $sql = "SELECT c.*, t.fullname AS trader_name, t.phone AS trader_phone, s.stall_code, s.base_price AS price, a.area_name,
                        ss.code AS status_code, ss.status_name, sc.color_class,
                        DATEDIFF(c.end_date, CURRENT_DATE) AS days_remaining
@@ -25,6 +25,12 @@ class contractModel {
                 WHERE ss.code != '99' AND (t.id IS NULL OR t.status_id != (SELECT id FROM system_statuses WHERE domain = 'trader' AND code = '99'))";
         
         $params = [];
+
+        if ($marketId) {
+            $sql .= " AND a.market_id = :market_id";
+            $params['market_id'] = $marketId;
+        }
+
         if ($status) {
             $sql .= " AND ss.code = :status";
             $params['status'] = $status;

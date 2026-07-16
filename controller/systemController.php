@@ -301,72 +301,117 @@ class systemController {
      * Thêm tài khoản mới
      */
     public function user_add() {
-        $error = '';
-        $success = '';
         $db = database::getInstance();
+        $error = '';
+        $data = [
+            'username' => '',
+            'fullname' => '',
+            'email' => '',
+            'role' => 'admin',
+            'status' => 'active'
+        ];
+
+        // Lấy danh sách chợ có thể phân quyền
+        if (marketService::isSuperAdmin()) {
+            $marketsList = $db->select("SELECT id, name FROM markets WHERE status_code = 'active' ORDER BY name ASC");
+        } else {
+            $managerUserId = session::get('user_id');
+            $marketsList = $db->select("
+                SELECT m.id, m.name 
+                FROM user_markets um
+                JOIN markets m ON um.market_id = m.id
+                WHERE um.user_id = :manager_id AND m.status_code = 'active'
+                ORDER BY m.name ASC
+            ", ['manager_id' => $managerUserId]);
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $username = trim($_POST['username'] ?? '');
-            $password = $_POST['password'] ?? '';
-            $fullname = trim($_POST['fullname'] ?? '');
-            $email = trim($_POST['email'] ?? '');
-            $actorId = $_POST['actor_id'] ?? '';
-            $marketIds = $_POST['market_ids'] ?? [];
+            $data['username'] = trim($_POST['username'] ?? '');
+            $data['fullname'] = trim($_POST['fullname'] ?? '');
+            $data['email'] = trim($_POST['email'] ?? '');
+            $data['password'] = $_POST['password'] ?? '';
+            $data['role'] = $_POST['role'] ?? 'admin'; // actor_code
+            $data['status'] = $_POST['status'] ?? 'active';
+            $checkedMarkets = $_POST['markets'] ?? [];
 
-            if (empty($username) || empty($password) || empty($fullname) || empty($actorId)) {
-                $error = 'Vui lòng nhập đầy đủ các trường bắt buộc!';
-            } else {
-                try {
-                    $userModel = new userModel();
-                    
-                    // Kiểm tra username trùng lặp
-                    $exists = $db->selectOne("SELECT id FROM users WHERE username = :username", ['username' => $username]);
-                    if ($exists) {
-                        $error = 'Tên đăng nhập đã tồn tại!';
-                    } else {
-                        // Tạo tài khoản
+            // Admin Market chỉ có quyền tạo Nhân viên thường (admin)
+            if (marketService::isAdminMarket() && $data['role'] !== 'admin') {
+                $data['role'] = 'admin';
+            }
+
+            $is_active = ($data['status'] === 'active') ? 1 : 0;
+
+            $validator = new validator();
+            $validator->required('username', $data['username'], 'Vui lòng nhập tên đăng nhập.')
+                       ->required('password', $data['password'], 'Vui lòng nhập mật khẩu.')
+                       ->required('fullname', $data['fullname'], 'Vui lòng nhập họ tên.')
+                       ->email('email', $data['email'], 'Email không đúng định dạng.');
+
+            if ($validator->isValid()) {
+                $userModel = new userModel();
+                if ($userModel->getByUsername($data['username'])) {
+                    $error = 'Tên đăng nhập đã tồn tại.';
+                } else if ($data['email'] && $userModel->getByEmail($data['email'])) {
+                    $error = 'Email này đã được đăng ký cho tài khoản khác.';
+                } else {
+                    try {
+                        // Lấy actor_id tương ứng
+                        $actor = $db->selectOne("SELECT id FROM system_actors WHERE actor_code = :code", ['code' => $data['role']]);
+                        $actorId = $actor ? (int)$actor['id'] : 3;
+
                         $newUserId = $userModel->create([
-                            'username' => $username,
-                            'password' => $password,
-                            'fullname' => $fullname,
-                            'email'    => $email,
-                            'actor_id' => $actorId
+                            'username' => $data['username'],
+                            'password' => $data['password'],
+                            'fullname' => $data['fullname'],
+                            'email' => $data['email'],
+                            'user_group' => ($data['role'] === 'super_market') ? 1 : 2,
+                            'actor_id' => $actorId,
+                            'is_active' => $is_active
                         ]);
 
-                        // Gán liên kết chợ nếu có chọn
-                        if (!empty($marketIds)) {
-                            foreach ($marketIds as $mId) {
+                        // Lưu liên kết chợ trong user_markets
+                        $roleMapping = [
+                            'super_market' => 1,
+                            'admin_market' => 4,
+                            'admin' => 2
+                        ];
+                        $roleId = $roleMapping[$data['role']] ?? 2;
+
+                        if ($data['role'] !== 'super_market') {
+                            foreach ($checkedMarkets as $mId) {
+                                // Xác minh chợ nằm trong quyền quản lý của admin_market
+                                if (marketService::isAdminMarket() && !in_array((int)$mId, array_column($marketsList, 'id'))) {
+                                    continue;
+                                }
                                 $db->query("
                                     INSERT INTO user_markets (user_id, market_id, role_id)
                                     VALUES (:user_id, :market_id, :role_id)
                                 ", [
-                                    'user_id'   => $newUserId,
+                                    'user_id' => $newUserId,
                                     'market_id' => $mId,
-                                    'role_id'   => ($actorId == 2 ? 4 : 2) // Vai trò mặc định trong user_markets
+                                    'role_id' => $roleId
                                 ]);
                             }
                         }
 
-                        $success = 'Tạo tài khoản thành công!';
-                        header("Location: " . BASE_URL . "system/users");
+                        session::set('success_message', 'Tạo tài khoản thành công!');
+                        header('Location: ' . BASE_URL . 'system/users');
                         exit();
+                    } catch (Exception $e) {
+                        $error = 'Lỗi hệ thống: ' . $e->getMessage();
                     }
-                } catch (Exception $e) {
-                    $error = 'Lỗi hệ thống: ' . $e->getMessage();
                 }
+            } else {
+                $errors = $validator->getErrors();
+                $error = reset($errors);
             }
         }
 
-        // Lấy danh sách các chợ & vai trò để chọn gán
-        $markets = $db->select("SELECT id, name FROM markets WHERE status_code = 'active'");
-        $actors = $db->select("SELECT * FROM system_actors ORDER BY id ASC");
-
         $this->view('backend/user/add', [
-            'title' => 'Tạo Tài Khoản Mới',
-            'markets' => $markets,
-            'actors' => $actors,
-            'error' => $error,
-            'success' => $success
+            'title' => 'Tạo Tài Khoản Nhân Viên',
+            'data' => $data,
+            'marketsList' => $marketsList,
+            'error' => $error
         ]);
     }
 
@@ -375,103 +420,161 @@ class systemController {
      */
     public function user_edit($id = null) {
         if (!$id) {
-            header("Location: " . BASE_URL . "system/users");
+            header('Location: ' . BASE_URL . 'system/users');
             exit();
         }
 
         $db = database::getInstance();
         $userModel = new userModel();
-        $user = $userModel->getById($id);
+        
+        // Load user joined with actor info
+        $user = $db->selectOne("
+            SELECT u.*, sa.actor_code 
+            FROM users u 
+            LEFT JOIN system_actors sa ON u.actor_id = sa.id 
+            WHERE u.id = :id
+        ", ['id' => $id]);
 
         if (!$user) {
-            header("Location: " . BASE_URL . "system/users");
+            session::set('error_message', 'Không tìm thấy tài khoản nhân viên.');
+            header('Location: ' . BASE_URL . 'system/users');
             exit();
         }
 
-        $error = '';
-        $success = '';
+        // Lấy danh sách chợ có thể phân quyền
+        if (marketService::isSuperAdmin()) {
+            $marketsList = $db->select("SELECT id, name FROM markets WHERE status_code = 'active' ORDER BY name ASC");
+        } else {
+            $managerUserId = session::get('user_id');
+            $marketsList = $db->select("
+                SELECT m.id, m.name 
+                FROM user_markets um
+                JOIN markets m ON um.market_id = m.id
+                WHERE um.user_id = :manager_id AND m.status_code = 'active'
+                ORDER BY m.name ASC
+            ", ['manager_id' => $managerUserId]);
 
+            // Bảo mật: admin_market chỉ được sửa tài khoản admin thường có liên kết với chợ của mình quản lý
+            $isAssociated = $db->selectOne("
+                SELECT 1 FROM user_markets 
+                WHERE user_id = :target_id AND market_id IN (
+                    SELECT market_id FROM user_markets WHERE user_id = :manager_id
+                )
+            ", ['target_id' => $id, 'manager_id' => $managerUserId]);
+
+            if (!$isAssociated && $user['actor_code'] !== 'admin') {
+                session::set('error_message', 'Bạn không có quyền chỉnh sửa tài khoản này.');
+                header('Location: ' . BASE_URL . 'system/users');
+                exit();
+            }
+        }
+
+        // Lấy các chợ đã được gán hiện tại của user này
+        $assignedMarkets = array_column($db->select("SELECT market_id FROM user_markets WHERE user_id = :id", ['id' => $id]), 'market_id');
+
+        $error = '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fullname = trim($_POST['fullname'] ?? '');
             $email = trim($_POST['email'] ?? '');
-            $actorId = $_POST['actor_id'] ?? $user['actor_id'];
             $password = $_POST['password'] ?? '';
-            $marketIds = $_POST['market_ids'] ?? [];
+            $role = $_POST['role'] ?? $user['actor_code']; // actor_code
+            $status = $_POST['status'] ?? ($user['is_active'] ? 'active' : 'inactive');
+            $checkedMarkets = $_POST['markets'] ?? [];
 
-            if (empty($fullname)) {
-                $error = 'Họ tên không được để trống!';
-            } else {
-                try {
-                    // Cập nhật thông tin cơ bản
-                    $updateData = [
-                        'fullname' => $fullname,
-                        'email'    => $email,
-                        'actor_id' => $actorId
-                    ];
-                    if (!empty($password)) {
-                        $updateData['password'] = $password;
-                    }
-                    $userModel->update($id, $updateData);
+            // Admin Market chỉ được giữ nguyên vai trò 'admin' hoặc ép về 'admin'
+            if (marketService::isAdminMarket()) {
+                $role = 'admin';
+            }
 
-                    // Cập nhật liên kết chợ (Chỉ cập nhật cho các chợ mà người quản lý có quyền gán)
-                    if (marketService::isSuperAdmin()) {
-                        $db->query("DELETE FROM user_markets WHERE user_id = :id", ['id' => $id]);
-                        foreach ($marketIds as $mId) {
-                            $db->query("
-                                INSERT INTO user_markets (user_id, market_id, role_id)
-                                VALUES (:user_id, :market_id, :role_id)
-                            ", [
-                                'user_id'   => $id,
-                                'market_id' => $mId,
-                                'role_id'   => ($actorId == 2 ? 4 : 2)
-                            ]);
+            $is_active = ($status === 'active') ? 1 : 0;
+
+            $validator = new validator();
+            $validator->required('fullname', $fullname, 'Vui lòng nhập họ tên.')
+                       ->email('email', $email, 'Email không đúng định dạng.');
+
+            if ($validator->isValid()) {
+                $dupUser = $userModel->getByEmail($email);
+                if ($dupUser && $dupUser['id'] != $id) {
+                    $error = 'Email này đã được sử dụng bởi một tài khoản khác.';
+                } else {
+                    try {
+                        // Lấy actor_id tương ứng
+                        $actor = $db->selectOne("SELECT id FROM system_actors WHERE actor_code = :code", ['code' => $role]);
+                        $actorId = $actor ? (int)$actor['id'] : 3;
+
+                        $userModel->update($id, [
+                            'fullname' => $fullname,
+                            'email' => $email,
+                            'user_group' => ($role === 'super_market') ? 1 : 2,
+                            'actor_id' => $actorId,
+                            'is_active' => $is_active
+                        ]);
+
+                        if (!empty($password)) {
+                            $userModel->updatePassword($id, $password);
                         }
-                    } else {
-                        // admin_market chỉ sửa được liên kết tại các chợ họ quản lý
-                        $managerId = session::get('user_id');
-                        $managerMarkets = array_column($db->select("SELECT market_id FROM user_markets WHERE user_id = :id", ['id' => $managerId]), 'market_id');
-                        if (!empty($managerMarkets)) {
-                            $placeholders = implode(',', array_fill(0, count($managerMarkets), '?'));
-                            $deleteParams = array_merge([$id], $managerMarkets);
-                            $db->query("DELETE FROM user_markets WHERE user_id = ? AND market_id IN ($placeholders)", $deleteParams);
-                            
-                            foreach ($marketIds as $mId) {
-                                if (in_array($mId, $managerMarkets)) {
+
+                        // Cập nhật gán chợ trong user_markets
+                        // Xóa các liên kết chợ cũ trong phạm vi chợ quản lý
+                        $marketsScopeIds = array_column($marketsList, 'id');
+                        if (!empty($marketsScopeIds)) {
+                            $placeholders = implode(',', array_map(function($i) { return ":m{$i}"; }, range(0, count($marketsScopeIds) - 1)));
+                            $deleteParams = ['id' => $id];
+                            foreach ($marketsScopeIds as $idx => $mId) {
+                                $deleteParams["m{$idx}"] = $mId;
+                            }
+                            $db->query("DELETE FROM user_markets WHERE user_id = :id AND market_id IN ($placeholders)", $deleteParams);
+                        }
+
+                        // Thêm các liên kết chợ mới
+                        $roleMapping = [
+                            'super_market' => 1,
+                            'admin_market' => 4,
+                            'admin' => 2
+                        ];
+                        $roleId = $roleMapping[$role] ?? 2;
+
+                        if ($role !== 'super_market') {
+                            foreach ($checkedMarkets as $mId) {
+                                if (in_array((int)$mId, $marketsScopeIds)) {
                                     $db->query("
                                         INSERT INTO user_markets (user_id, market_id, role_id)
                                         VALUES (:user_id, :market_id, :role_id)
                                     ", [
-                                        'user_id'   => $id,
+                                        'user_id' => $id,
                                         'market_id' => $mId,
-                                        'role_id'   => 2
+                                        'role_id' => $roleId
                                     ]);
                                 }
                             }
                         }
-                    }
 
-                    $success = 'Cập nhật tài khoản thành công!';
-                    header("Location: " . BASE_URL . "system/users");
-                    exit();
-                } catch (Exception $e) {
-                    $error = 'Lỗi hệ thống: ' . $e->getMessage();
+                        session::set('success_message', 'Cập nhật tài khoản nhân viên thành công!');
+                        header('Location: ' . BASE_URL . 'system/users');
+                        exit();
+                    } catch (Exception $e) {
+                        $error = 'Lỗi hệ thống: ' . $e->getMessage();
+                    }
                 }
+            } else {
+                $errors = $validator->getErrors();
+                $error = reset($errors);
             }
+
+            // Đồng bộ dữ liệu để hiển thị lại nếu lỗi
+            $user['fullname'] = $fullname;
+            $user['email'] = $email;
+            $user['actor_code'] = $role;
+            $user['is_active'] = $is_active;
+            $assignedMarkets = $checkedMarkets;
         }
 
-        // Lấy danh sách chợ đã được gán hiện tại
-        $assignedMarkets = array_column($db->select("SELECT market_id FROM user_markets WHERE user_id = :id", ['id' => $id]), 'market_id');
-        $markets = $db->select("SELECT id, name FROM markets WHERE status_code = 'active'");
-        $actors = $db->select("SELECT * FROM system_actors ORDER BY id ASC");
-
         $this->view('backend/user/edit', [
-            'title' => 'Sửa Tài Khoản',
+            'title' => 'Chỉnh Sửa Tài Khoản Nhân Viên',
             'user' => $user,
-            'markets' => $markets,
-            'actors' => $actors,
+            'marketsList' => $marketsList,
             'assignedMarkets' => $assignedMarkets,
-            'error' => $error,
-            'success' => $success
+            'error' => $error
         ]);
     }
 

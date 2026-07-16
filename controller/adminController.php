@@ -244,13 +244,15 @@ class adminController {
             'locked' => 0
         ];
 
+        $marketId = marketService::currentMarketId();
+
         try {
-            $stalls = $stallModel->getAll($areaId ?: null, $status ?: null, $search ?: null);
-            $areas = $stallModel->getAreas();
+            $stalls = $stallModel->getAll($areaId ?: null, $status ?: null, $search ?: null, $marketId);
+            $areas = $stallModel->getAreas($marketId);
             $statuses = $stallModel->getStallStatuses();
 
-            // Lấy toàn bộ sạp để tính thống kê
-            $allStalls = $stallModel->getAll();
+            // Lấy toàn bộ sạp của chợ này để tính thống kê
+            $allStalls = $stallModel->getAll(null, null, null, $marketId);
             $stats['total'] = count($allStalls);
             foreach ($allStalls as $s) {
                 if ($s['status'] === 'rented') $stats['rented']++;
@@ -285,8 +287,10 @@ class adminController {
         $contracts = [];
         $statuses = [];
         
+        $marketId = marketService::currentMarketId();
+
         try {
-            $contracts = $contractModel->getAll($status ?: null, $search ?: null);
+            $contracts = $contractModel->getAll($status ?: null, $search ?: null, $marketId);
             $statuses = $contractModel->getContractStatuses();
         } catch (Exception $e) {
             error_log('[contracts] EXCEPTION: ' . $e->getMessage());
@@ -352,11 +356,13 @@ class adminController {
         $certificates = [];
         $statuses = [];
 
+        $marketId = marketService::currentMarketId();
+
         try {
             // Tự động cập nhật trạng thái hết hạn trước khi hiển thị
             $foodsafetyModel->autoUpdateExpiryStatus();
             
-            $certificates = $foodsafetyModel->getCertificates();
+            $certificates = $foodsafetyModel->getCertificates(null, null, null, null, $marketId);
             $statuses = $foodsafetyModel->getAttpStatuses();
         } catch (Exception $e) {
             error_log('[foodsafety] EXCEPTION: ' . $e->getMessage());
@@ -387,8 +393,9 @@ class adminController {
         $statuses = [];
         $stallTypes = [];
 
+        $marketId = marketService::currentMarketId();
         try {
-            $areas = $stallModel->getAreas();
+            $areas = $stallModel->getAreas($marketId);
             $statuses = $stallModel->getStallStatuses();
             $stallTypes = $categoryModel->getItems('stall_type');
         } catch (Exception $e) {
@@ -420,12 +427,13 @@ class adminController {
         $statuses = [];
         $stallTypes = [];
 
+        $marketId = marketService::currentMarketId();
         try {
             $stall = $stallModel->getById($id);
             if (!$stall) {
                 throw new Exception('Không tìm thấy sạp chợ yêu cầu.');
             }
-            $areas = $stallModel->getAreas();
+            $areas = $stallModel->getAreas($marketId);
             $statuses = $stallModel->getStallStatuses();
             $stallTypes = $categoryModel->getItems('stall_type');
         } catch (Exception $e) {
@@ -658,9 +666,11 @@ class adminController {
         $business_lines = [];
         $statuses = [];
         
+        $marketId = marketService::currentMarketId();
+
         try {
             // Lấy danh sách tiểu thương theo bộ lọc
-            $traders = $traderModel->getAllTraders($search, $business_line, $status);
+            $traders = $traderModel->getAllTraders($search, $business_line, $status, $marketId);
             $statuses = $traderModel->getTraderStatuses();
             
             // Lấy danh sách các ngành hàng từ DB

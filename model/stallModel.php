@@ -13,9 +13,15 @@ class stallModel {
        1. Quản lý Khu vực (Areas)
        ========================================================================== */
 
-    public function getAreas() {
-        $sql = "SELECT * FROM areas ORDER BY area_name ASC";
-        return $this->db->select($sql);
+    public function getAreas($marketId = null) {
+        $sql = "SELECT * FROM areas";
+        $params = [];
+        if ($marketId) {
+            $sql .= " WHERE market_id = :market_id";
+            $params['market_id'] = $marketId;
+        }
+        $sql .= " ORDER BY area_name ASC";
+        return $this->db->select($sql, $params);
     }
 
     public function createArea($name, $desc = '') {
@@ -31,7 +37,7 @@ class stallModel {
     /**
      * Lấy toàn bộ danh sách sạp kèm thông tin khu vực và bộ lọc tìm kiếm
      */
-    public function getAll($areaId = null, $status = null, $search = null) {
+    public function getAll($areaId = null, $status = null, $search = null, $marketId = null) {
         $sql = "SELECT s.*, st.type_name AS stall_type, ss.code AS status, ss.status_name, sc.color_class, a.area_name, a.block, a.lot, t.fullname AS trader_name, bl.line_name AS business_line_name 
                 FROM stalls s
                 LEFT JOIN stall_types st ON s.stall_type_id = st.id
@@ -44,6 +50,11 @@ class stallModel {
         
         $where = [];
         $params = [];
+
+        if ($marketId) {
+            $where[] = "a.market_id = :market_id";
+            $params['market_id'] = $marketId;
+        }
 
         if ($areaId) {
             $where[] = "s.area_id = :area_id";

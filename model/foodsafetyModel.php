@@ -12,7 +12,7 @@ class foodsafetyModel {
     /**
      * Lấy danh sách giấy chứng nhận vệ sinh ATTP, sức khỏe, tập huấn của tiểu thương
      */
-    public function getCertificates($traderId = null, $docType = null, $status = null, $search = null) {
+    public function getCertificates($traderId = null, $docType = null, $status = null, $search = null, $marketId = null) {
         $sql = "SELECT c.*, dt.type_name AS doc_type, dt.type_code, t.fullname AS trader_name, t.phone AS trader_phone, t.description AS shop_name,
                        bl.line_name AS business_line,
                        ss.code AS status_code, ss.status_name, sc.color_class,
@@ -26,6 +26,17 @@ class foodsafetyModel {
                 WHERE ss.code != '99' AND (t.id IS NULL OR t.status_id != (SELECT id FROM system_statuses WHERE domain = 'trader' AND code = '99'))";
         
         $params = [];
+
+        if ($marketId) {
+            $sql .= " AND t.id IN (
+                SELECT DISTINCT c2.trader_id 
+                FROM contracts c2
+                JOIN stalls s2 ON c2.stall_id = s2.id
+                JOIN areas a2 ON s2.area_id = a2.id
+                WHERE a2.market_id = :market_id
+            )";
+            $params['market_id'] = $marketId;
+        }
 
         if ($traderId) {
             $sql .= " AND c.trader_id = :trader_id";

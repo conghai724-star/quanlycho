@@ -12,7 +12,7 @@ class traderModel {
     /**
      * Lấy toàn bộ danh sách tiểu thương kèm công nợ động và bộ lọc tìm kiếm
      */
-    public function getAllTraders($search = '', $business_line_id = '', $status = '') {
+    public function getAllTraders($search = '', $business_line_id = '', $status = '', $marketId = null) {
         $sql = "SELECT t.*, 
                        (
                            SELECT COALESCE(SUM(b.total_amount - b.paid_amount), 0)
@@ -31,6 +31,17 @@ class traderModel {
                 LEFT JOIN business_lines bl ON bl.id = t.business_line_id
                 WHERE ss.code != '99'";
         $params = [];
+
+        if ($marketId) {
+            $sql .= " AND t.id IN (
+                SELECT DISTINCT c.trader_id 
+                FROM contracts c
+                JOIN stalls s ON c.stall_id = s.id
+                JOIN areas a ON s.area_id = a.id
+                WHERE a.market_id = :market_id
+            )";
+            $params['market_id'] = $marketId;
+        }
 
         if (!empty($search)) {
             $sql .= " AND (t.fullname LIKE :search1 OR t.phone LIKE :search2 OR t.cccd LIKE :search3 OR t.trader_code LIKE :search4)";
