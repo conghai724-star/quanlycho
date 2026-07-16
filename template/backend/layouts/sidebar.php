@@ -21,6 +21,14 @@
                 </a>
             <?php endif; ?>
 
+            <!-- Quản lý Chợ (chỉ dành cho super_market) -->
+            <?php if (marketService::isSuperAdmin()): ?>
+                <a class="nav-link <?php echo (isset($title) && $title === 'Quản Lý Danh Sách Chợ') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/markets">
+                    <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M3 6h18M3 14h18M9 21v-7h6v7"/></svg>
+                    <span class="nav-text">Quản lý Chợ</span>
+                </a>
+            <?php endif; ?>
+
             <!-- Dashboard chợ hiện tại (nếu có chợ đang hoạt động) -->
             <?php if ($activeMarketId > 0): ?>
                 <a class="nav-link <?php echo (isset($title) && $title === 'Bảng Điều Khiển') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/dashboard">

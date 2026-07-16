@@ -1372,6 +1372,135 @@ class adminController {
     }
 
     /**
+     * Danh sách chợ (Chỉ dành cho Super Market)
+     */
+    public function markets() {
+        if (!marketService::isSuperAdmin()) {
+            header("HTTP/1.1 403 Forbidden");
+            echo "<h1>403 Forbidden</h1><p>Bạn không có quyền truy cập chức năng này.</p>";
+            exit();
+        }
+
+        $search = $_GET['q'] ?? '';
+        $marketModel = new marketModel();
+        $markets = $marketModel->getAll($search);
+
+        $this->view('backend/market/index', [
+            'title' => 'Quản Lý Danh Sách Chợ',
+            'markets' => $markets,
+            'search' => $search
+        ]);
+    }
+
+    /**
+     * Thêm chợ mới
+     */
+    public function market_add() {
+        if (!marketService::isSuperAdmin()) {
+            header("HTTP/1.1 403 Forbidden");
+            echo "<h1>403 Forbidden</h1><p>Bạn không có quyền truy cập chức năng này.</p>";
+            exit();
+        }
+
+        $error = '';
+        $success = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $name = trim($_POST['name'] ?? '');
+            $code = trim($_POST['market_code'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $manager = trim($_POST['manager_name'] ?? '');
+            $status = $_POST['status_code'] ?? 'active';
+
+            if (empty($name) || empty($code)) {
+                $error = 'Vui lòng nhập đầy đủ Tên chợ và Mã chợ!';
+            } else {
+                try {
+                    $marketModel = new marketModel();
+                    $data = [
+                        'market_code' => $code,
+                        'name' => $name,
+                        'phone' => $phone,
+                        'email' => $email,
+                        'manager_name' => $manager,
+                        'status_code' => $status
+                    ];
+                    $marketModel->create($data);
+                    header("Location: " . BASE_URL . "admin/markets");
+                    exit();
+                } catch (Exception $e) {
+                    $error = 'Lỗi hệ thống: ' . $e->getMessage();
+                }
+            }
+        }
+
+        $this->view('backend/market/add', [
+            'title' => 'Thêm Chợ Mới',
+            'error' => $error,
+            'success' => $success
+        ]);
+    }
+
+    /**
+     * Sửa chợ
+     */
+    public function market_edit($id) {
+        if (!marketService::isSuperAdmin()) {
+            header("HTTP/1.1 403 Forbidden");
+            echo "<h1>403 Forbidden</h1><p>Bạn không có quyền truy cập chức năng này.</p>";
+            exit();
+        }
+
+        $marketModel = new marketModel();
+        $market = $marketModel->getById($id);
+
+        if (!$market) {
+            header("Location: " . BASE_URL . "admin/markets");
+            exit();
+        }
+
+        $error = '';
+        $success = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $name = trim($_POST['name'] ?? '');
+            $code = trim($_POST['market_code'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $manager = trim($_POST['manager_name'] ?? '');
+            $status = $_POST['status_code'] ?? 'active';
+
+            if (empty($name) || empty($code)) {
+                $error = 'Vui lòng nhập đầy đủ Tên chợ và Mã chợ!';
+            } else {
+                try {
+                    $data = [
+                        'market_code' => $code,
+                        'name' => $name,
+                        'phone' => $phone,
+                        'email' => $email,
+                        'manager_name' => $manager,
+                        'status_code' => $status
+                    ];
+                    $marketModel->update($id, $data);
+                    header("Location: " . BASE_URL . "admin/markets");
+                    exit();
+                } catch (Exception $e) {
+                    $error = 'Lỗi hệ thống: ' . $e->getMessage();
+                }
+            }
+        }
+
+        $this->view('backend/market/edit', [
+            'title' => 'Sửa Thông Tin Chợ',
+            'market' => $market,
+            'error' => $error,
+            'success' => $success
+        ]);
+    }
+
+    /**
      * Hàm render view kèm theo Layout của Admin Dashboard
      */
     protected function view($templatePath, $data = []) {
