@@ -479,8 +479,16 @@ class systemController {
      * Khóa / Mở khóa tài khoản (AJAX POST)
      */
     public function user_toggle_status($id = null) {
-        if (!$id) {
-            echo json_encode(['success' => false, 'message' => 'Không tìm thấy ID người dùng']);
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$id) {
+            echo json_encode(['success' => false, 'message' => 'Yêu cầu không hợp lệ.']);
+            exit();
+        }
+
+        // Không cho tự khóa chính mình
+        if ((int)$id === (int)session::get('user_id')) {
+            echo json_encode(['success' => false, 'message' => 'Bạn không thể tự khóa tài khoản của chính mình!']);
             exit();
         }
 

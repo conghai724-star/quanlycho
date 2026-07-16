@@ -2,7 +2,7 @@
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
     <div style="font-size: 20px; font-weight: 700; color: var(--text-heading);">Quản Lý Danh Sách Chợ</div>
     
-    <a href="<?php echo BASE_URL; ?>admin/market_add" class="btn btn-primary" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: white;">
+    <a href="<?php echo BASE_URL; ?>system/market_add" class="btn btn-primary" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: white;">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 14px; height: 14px;"><path d="M8 2v12M2 8h12"/></svg>
         Thêm Chợ Mới
     </a>
@@ -58,7 +58,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td style="padding: 14px 16px; text-align: right;">
-                                    <a href="<?php echo BASE_URL; ?>admin/market_edit/<?php echo $m['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none; color: inherit; display: inline-flex; align-items: center; justify-content: center;" title="Sửa thông tin">
+                                    <a href="<?php echo BASE_URL; ?>system/market_edit/<?php echo $m['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none; color: inherit; display: inline-flex; align-items: center; justify-content: center;" title="Sửa thông tin">
                                         <i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Sửa
                                     </a>
                                 </td>
