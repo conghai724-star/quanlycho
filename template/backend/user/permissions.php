@@ -166,7 +166,7 @@
                 <div style="text-align: center; padding: 40px; color: #7f8c8d;">
                     <i class="fa-regular fa-folder-open" style="font-size: 48px; margin-bottom: 12px; color: #bdc3c7;"></i>
                     <p style="font-size: 16px; margin: 0;">Không tìm thấy tài khoản nhân viên vận hành (Staff) nào thuộc các chợ bạn quản lý.</p>
-                    <a href="<?php echo BASE_URL; ?>admin/user_add" class="btn btn-primary" style="margin-top: 15px; text-decoration: none; color: white; display: inline-flex; align-items: center; gap: 6px;">
+                    <a href="<?php echo BASE_URL; ?>system/user_add" class="btn btn-primary" style="margin-top: 15px; text-decoration: none; color: white; display: inline-flex; align-items: center; gap: 6px;">
                         <i class="fa-solid fa-user-plus"></i> Tạo nhân viên mới
                     </a>
                 </div>
@@ -291,7 +291,7 @@
             input.prop('disabled', true);
 
             $.ajax({
-                url: '<?php echo BASE_URL; ?>admin/save_permissions',
+                url: '<?php echo BASE_URL; ?>system/save_permissions',
                 type: 'POST',
                 data: {
                     user_id: userId,

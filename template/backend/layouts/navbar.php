@@ -51,8 +51,11 @@
                             .then(response => response.json())
                             .then(res => {
                                 if (res.status === 200) {
-                                    // Chuyển về dashboard nếu đang xem các trang cụ thể mà không được quyền
-                                    window.location.href = '<?php echo BASE_URL; ?>admin/dashboard';
+                                    if (marketId == 0) {
+                                        window.location.href = '<?php echo BASE_URL; ?>system/dashboard';
+                                    } else {
+                                        window.location.href = '<?php echo BASE_URL; ?>admin/dashboard';
+                                    }
                                 } else {
                                     alert(res.message);
                                 }

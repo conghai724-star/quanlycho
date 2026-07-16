@@ -11,9 +11,7 @@
 <div class="card">
     <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
         <div class="card-title" style="font-size: 16px; font-weight: 600;">Danh sách chợ trong hệ thống</div>
-        
-        <!-- Bộ tìm kiếm -->
-        <form method="GET" action="<?php echo BASE_URL; ?>admin/markets" style="display: flex; gap: 8px;">
+        <form method="GET" action="<?php echo BASE_URL; ?>system/markets" style="display: flex; gap: 8px;">
             <input type="text" name="q" placeholder="Tìm theo tên hoặc mã chợ..." value="<?php echo htmlspecialchars($search ?? ''); ?>" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; width: 220px;">
             <button type="submit" class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">Tìm kiếm</button>
         </form>

@@ -6,7 +6,7 @@
         <label><input type="radio" name="user-mode" value="logs" onclick="App.user.switchTab('logs')"><span>Nhật ký hệ thống (Audit)</span></label>
     </div>
     
-    <a href="<?php echo BASE_URL; ?>admin/user_add" class="btn btn-primary" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: white;">
+    <a href="<?php echo BASE_URL; ?>system/user_add" class="btn btn-primary" style="height: 36px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: white;">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 14px; height: 14px;"><path d="M8 2v12M2 8h12"/></svg>
         Tạo tài khoản mới
     </a>
@@ -66,7 +66,7 @@
                                 <td style="padding: 14px 16px; text-align: right;">
                                     <div style="display: flex; justify-content: flex-end; gap: 6px;">
                                         <!-- Sửa tài khoản -->
-                                        <a href="<?php echo BASE_URL; ?>admin/user_edit/<?php echo $user['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none; color: inherit; display: inline-flex; align-items: center; justify-content: center;" title="Sửa tài khoản">
+                                        <a href="<?php echo BASE_URL; ?>system/user_edit/<?php echo $user['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none; color: inherit; display: inline-flex; align-items: center; justify-content: center;" title="Sửa tài khoản">
                                             <i class="fa-solid fa-pen"></i>
                                         </a>
                                         <!-- Khóa/Mở khóa tài khoản (Mục F.8) -->
@@ -171,10 +171,10 @@ $(document).ready(function() {
                 color: swalColor
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // App.utils.ajaxRequest('POST', '<?php echo BASE_URL; ?>admin/user_toggle_status/' + id, {}, (res) => { ... });
+                    // App.utils.ajaxRequest('POST', '<?php echo BASE_URL; ?>system/user_toggle_status/' + id, {}, (res) => { ... });
                     $.ajax({
                         type: 'POST',
-                        url: '<?php echo BASE_URL; ?>admin/user_toggle_status/' + id,
+                        url: '<?php echo BASE_URL; ?>system/user_toggle_status/' + id,
                         data: JSON.stringify({}),
                         contentType: 'application/json',
                         headers: {

@@ -1,6 +1,6 @@
 <!-- Form Tạo Tài Khoản Nhân Viên Mới -->
 <div style="margin-bottom: 20px;">
-    <a href="<?php echo BASE_URL; ?>admin/users" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+    <a href="<?php echo BASE_URL; ?>system/users" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
         <i class="fa-solid fa-arrow-left"></i> Quay lại tài khoản
     </a>
 </div>
@@ -16,7 +16,7 @@
             </div>
         <?php endif; ?>
 
-        <form action="<?php echo BASE_URL; ?>admin/user_add" method="POST">
+        <form action="<?php echo BASE_URL; ?>system/user_add" method="POST">
             <?php csrf_field(); ?>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <!-- Tên đăng nhập -->
@@ -105,7 +105,7 @@
             <hr style="border: 0; border-top: 1px solid var(--border-color-light); margin: 24px 0;">
 
             <div style="display: flex; justify-content: flex-end; gap: 12px;">
-                <a href="<?php echo BASE_URL; ?>admin/users" class="btn btn-outline" style="text-decoration: none;">Hủy bỏ</a>
+                <a href="<?php echo BASE_URL; ?>system/users" class="btn btn-outline" style="text-decoration: none;">Hủy bỏ</a>
                 <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
                     <i class="fa-solid fa-user-plus"></i> Tạo tài khoản
                 </button>

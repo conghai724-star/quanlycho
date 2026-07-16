@@ -1,7 +1,7 @@
 <!-- Giao diện Sửa Thông Tin Chợ -->
 <div style="max-width: 800px; margin: 0 auto; padding: 20px 0;">
     <div style="margin-bottom: 20px;">
-        <a href="<?php echo BASE_URL; ?>admin/markets" style="text-decoration: none; color: var(--text-muted); font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px;">
+        <a href="<?php echo BASE_URL; ?>system/markets" style="text-decoration: none; color: var(--text-muted); font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-arrow-left"></i> Quay lại danh sách chợ
         </a>
     </div>
@@ -20,7 +20,7 @@
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="<?php echo BASE_URL; ?>admin/market_edit/<?php echo $market['id']; ?>">
+            <form method="POST" action="<?php echo BASE_URL; ?>system/market_edit/<?php echo $market['id']; ?>">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
                     <!-- Tên chợ -->
                     <div>
@@ -64,7 +64,7 @@
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 20px;">
-                    <a href="<?php echo BASE_URL; ?>admin/markets" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 38px;">Hủy bỏ</a>
+                    <a href="<?php echo BASE_URL; ?>system/markets" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; height: 38px;">Hủy bỏ</a>
                     <button type="submit" class="btn btn-primary" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">Cập Nhật</button>
                 </div>
             </form>

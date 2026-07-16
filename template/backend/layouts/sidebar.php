@@ -15,7 +15,7 @@
             
             <!-- Dashboard trang tổng hợp (nếu là super_market hoặc admin_market) -->
             <?php if (marketService::isSuperAdmin() || marketService::isAdminMarket()): ?>
-                <a class="nav-link <?php echo (isset($title) && $title === 'Trang Tổng Quan Hợp Nhất') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/dashboard?type=all">
+                <a class="nav-link <?php echo (isset($title) && $title === 'Trang Tổng Quan Hợp Nhất') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>system/dashboard">
                     <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="4" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="10" width="7" height="11" rx="1.5"/></svg>
                     <span class="nav-text">Trang tổng quan</span>
                 </a>
@@ -23,7 +23,7 @@
 
             <!-- Quản lý Chợ (chỉ dành cho super_market) -->
             <?php if (marketService::isSuperAdmin()): ?>
-                <a class="nav-link <?php echo (isset($title) && $title === 'Quản Lý Danh Sách Chợ') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/markets">
+                <a class="nav-link <?php echo (isset($title) && $title === 'Quản Lý Danh Sách Chợ') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>system/markets">
                     <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21h18M3 10h18M3 6h18M3 14h18M9 21v-7h6v7"/></svg>
                     <span class="nav-text">Quản lý Chợ</span>
                 </a>
@@ -136,14 +136,14 @@
 
                 <!-- Tài khoản -->
                 <?php if ($showUsers): ?>
-                    <a class="nav-link" href="<?php echo BASE_URL; ?>admin/users">
+                    <a class="nav-link" href="<?php echo BASE_URL; ?>system/users">
                         <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         <span class="nav-text">Tài khoản & Quyền</span>
                     </a>
                     
                     <!-- Phân quyền nhanh dành cho admin_market -->
                     <?php if (marketService::isAdminMarket()): ?>
-                        <a class="nav-link <?php echo (isset($title) && $title === 'Phân Quyền Nhân Viên') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>admin/permissions">
+                        <a class="nav-link <?php echo (isset($title) && $title === 'Phân Quyền Nhân Viên') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>system/permissions">
                             <i class="fa-solid fa-user-shield icon" style="font-size: 16px;"></i>
                             <span class="nav-text">Phân quyền Nhân viên</span>
                         </a>
