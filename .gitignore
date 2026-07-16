@@ -18,7 +18,7 @@
 .env.*.local
 
 # Các tệp cấu hình của IDE/Editor cá nhân
-.vscode/
+#.vscode/
 .idea/
 *.suo
 *.ntvs*
@@ -34,12 +34,12 @@ Thumbs.db
 desktop.ini
 
 # Thư mục tạm của agent AI
-.agents/
-.augment/
-.gemini/
-.codegraph/
-.codex/
-.cursor/
+#.agents/
+#.augment/
+#.gemini/
+#.codegraph/
+#.codex/
+#.cursor/
 .speci
 
 # Thư mục tạm / rác sinh ra trong quá trình dev/test
