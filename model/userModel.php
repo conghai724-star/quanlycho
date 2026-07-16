@@ -95,6 +95,7 @@ class userModel {
             'is_active'  => $data['is_active'] ?? 1
         ];
 
+        return $this->db->query($sql, $params);
     }
 
     /**

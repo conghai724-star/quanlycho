@@ -11,7 +11,7 @@
 <div class="card">
     <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
         <div class="card-title" style="font-size: 16px; font-weight: 600;">Danh sách chợ trong hệ thống</div>
-        <form method="GET" action="<?php echo BASE_URL; ?>system/markets" style="display: flex; gap: 8px;">
+        <form method="GET" action="<?php echo BASE_URL; ?>system/markets" style="display: flex; gap: 8px;" data-native-submit="true">
             <input type="text" name="q" placeholder="Tìm theo tên hoặc mã chợ..." value="<?php echo htmlspecialchars($search ?? ''); ?>" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; width: 220px;">
             <button type="submit" class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">Tìm kiếm</button>
         </form>
@@ -58,9 +58,14 @@
                                     <?php endif; ?>
                                 </td>
                                 <td style="padding: 14px 16px; text-align: right;">
-                                    <a href="<?php echo BASE_URL; ?>system/market_edit/<?php echo $m['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none; color: inherit; display: inline-flex; align-items: center; justify-content: center;" title="Sửa thông tin">
-                                        <i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Sửa
-                                    </a>
+                                    <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                                        <a href="<?php echo BASE_URL; ?>system/market_edit/<?php echo $m['id']; ?>" class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 11px; text-decoration: none; color: inherit; display: inline-flex; align-items: center; justify-content: center;" title="Sửa thông tin">
+                                            <i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Sửa
+                                        </a>
+                                        <button class="btn btn-ghost btn-sm btn-open-delete-market" data-market-id="<?php echo $m['id']; ?>" data-market-name="<?php echo htmlspecialchars($m['name']); ?>" data-url="<?php echo BASE_URL; ?>api/deleteMarket" style="padding: 4px 8px; font-size: 11px; color: #EA4335; display: inline-flex; align-items: center; justify-content: center;" title="Xóa">
+                                            <i class="fa-solid fa-trash-can" style="margin-right: 4px;"></i> Xóa
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -76,3 +81,74 @@
         </div>
     </div>
 </div>
+
+<?php csrf_field(); ?>
+
+<script>
+$(document).ready(function() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var swalBg = isDark ? '#1a2332' : '#ffffff';
+    var swalColor = isDark ? '#ffffff' : '#0f1623';
+
+    // Xóa chợ qua AJAX
+    $(document).on('click', '.btn-open-delete-market', function(e) {
+        e.preventDefault();
+        var btn = this;
+        var id = $(btn).data('market-id');
+        var name = $(btn).data('market-name') || '';
+        var csrf = $('input[name="csrf_token"]').val() || '';
+
+        Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn có chắc chắn muốn xóa chợ "' + name + '" không? Hành động này không thể hoàn tác.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý',
+            cancelButtonText: 'Hủy bỏ',
+            confirmButtonColor: '#d63939',
+            cancelButtonColor: '#626d7d',
+            background: swalBg,
+            color: swalColor
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Đang xử lý...',
+                    allowOutsideClick: false,
+                    background: swalBg,
+                    color: swalColor,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+                
+                $.ajax({
+                    type: 'POST',
+                    url: $(btn).data('url'),
+                    data: { id: id, csrf_token: csrf },
+                    dataType: 'json',
+                    success: function(data) {
+                        Swal.close();
+                        if (data.status === 200) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Thành công',
+                                text: data.message,
+                                timer: 1500,
+                                showConfirmButton: false,
+                                background: swalBg,
+                                color: swalColor
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Thất bại', text: data.message, background: swalBg, color: swalColor });
+                        }
+                    },
+                    error: function() {
+                        Swal.close();
+                        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra khi kết nối máy chủ.', background: swalBg, color: swalColor });
+                    }
+                });
+            }
+        });
+    });
+});
+</script>

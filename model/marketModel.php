@@ -72,4 +72,11 @@ class marketModel {
             'status_code'  => $data['status_code'] ?? 'active'
         ]);
     }
+    /**
+     * Xóa chợ (Soft Delete)
+     */
+    public function delete($id) {
+        $sql = "UPDATE markets SET status_code = 'deleted' WHERE id = :id";
+        return $this->db->query($sql, ['id' => $id]);
+    }
 }

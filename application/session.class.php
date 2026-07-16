@@ -79,12 +79,10 @@ class session {
         }
     }
 
-    /**
-     * Yêu cầu vai trò admin (Bảo vệ các tác vụ quản trị)
-     */
     public static function requireAdmin() {
         self::requireLogin();
-        if (self::get('user_group') != 1) {
+        $group = self::get('user_group');
+        if ($group != 1 && $group != 2) {
             header('Location: ' . BASE_URL . 'errors/forbidden');
             exit();
         }

@@ -266,9 +266,19 @@
             <h1>Hệ Thống Quản Lý Chợ Smart - BQL</h1>
             <p style="color: #7f8c8d; margin: 4px 0 0 0; font-size: 14px;">Trang tổng quan hợp nhất số liệu thống kê toàn hệ thống</p>
         </div>
-        <div style="font-size: 14px; color: #7f8c8d; background: #ffffff; padding: 10px 16px; border-radius: 12px; box-shadow: var(--shadow-premium);">
-            <i class="fa-regular fa-calendar-check" style="margin-right: 6px; color: #3a7bd5;"></i>
-            Tháng hiện tại: <strong><?php echo date('m/Y'); ?></strong>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <?php if (marketService::isSuperAdmin()): ?>
+            <a href="<?php echo BASE_URL; ?>system/market_add" style="display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: var(--accent-gradient); color: white; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 600; box-shadow: 0 4px 12px rgba(17,153,142,0.3); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                <i class="fa-solid fa-plus"></i> Thêm Chợ
+            </a>
+            <a href="<?php echo BASE_URL; ?>system/markets" style="display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: #ffffff; color: #3a7bd5; border: 1.5px solid #3a7bd5; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='#3a7bd5';this.style.color='white'" onmouseout="this.style.background='#ffffff';this.style.color='#3a7bd5'">
+                <i class="fa-solid fa-store"></i> Sửa / DS Chợ
+            </a>
+            <?php endif; ?>
+            <div style="font-size: 14px; color: #7f8c8d; background: #ffffff; padding: 10px 16px; border-radius: 12px; box-shadow: var(--shadow-premium);">
+                <i class="fa-regular fa-calendar-check" style="margin-right: 6px; color: #3a7bd5;"></i>
+                Tháng hiện tại: <strong><?php echo date('m/Y'); ?></strong>
+            </div>
         </div>
     </div>
 
@@ -317,6 +327,24 @@
                 <p class="value" style="color: #27ae60;"><?php echo number_format($stats['total_revenue'], 0, ',', '.'); ?> đ</p>
             </div>
         </div>
+
+        <!-- Tài khoản không hoạt động -->
+        <a href="<?php echo BASE_URL; ?>system/users" style="text-decoration: none;">
+        <div class="kpi-card" style="<?php echo ($stats['inactive_users'] > 0) ? 'border-left: 4px solid #e74c3c;' : ''; ?>">
+            <div class="kpi-icon-wrapper" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                <i class="fa-solid fa-user-lock"></i>
+            </div>
+            <div class="kpi-info">
+                <h3>TK không hoạt động</h3>
+                <p class="value" style="color: <?php echo ($stats['inactive_users'] > 0) ? '#e74c3c' : '#27ae60'; ?>;">
+                    <?php echo $stats['inactive_users']; ?>
+                    <?php if ($stats['inactive_users'] > 0): ?>
+                    <span style="font-size: 12px; font-weight: 500; color: #e74c3c; display: block; margin-top: 2px;">⚠ Cần xem xét</span>
+                    <?php endif; ?>
+                </p>
+            </div>
+        </div>
+        </a>
     </div>
 
     <!-- Charts Row -->

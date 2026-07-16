@@ -16,7 +16,7 @@
             </div>
         <?php endif; ?>
 
-        <form action="<?php echo BASE_URL; ?>system/user_add" method="POST">
+        <form id="form-add-user" action="<?php echo BASE_URL; ?>api/addUser" method="POST" data-native-submit="true">
             <?php csrf_field(); ?>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
                 <!-- Tên đăng nhập -->
@@ -92,6 +92,10 @@
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
             <script>
                 $(function() {
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    var swalBg = isDark ? '#1a2332' : '#ffffff';
+                    var swalColor = isDark ? '#ffffff' : '#0f1623';
+
                     $('#role').on('change', function() {
                         if (this.value === 'super_market') {
                             $('#markets-container').hide().find('input[type="checkbox"]').prop('checked', false);
@@ -99,6 +103,57 @@
                             $('#markets-container').show();
                         }
                     }).trigger('change');
+
+                    $('#form-add-user').on('submit', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var form = this;
+                        var $form = $(this);
+                        if (!form.checkValidity()) {
+                            form.reportValidity();
+                            return;
+                        }
+
+                        Swal.fire({
+                            title: 'Đang lưu thông tin...',
+                            allowOutsideClick: false,
+                            background: swalBg,
+                            color: swalColor,
+                            didOpen: function() { Swal.showLoading(); }
+                        });
+
+                        $.ajax({
+                            type: "POST",
+                            url: $form.attr('action'),
+                            data: new FormData(form),
+                            processData: false,
+                            contentType: false,
+                            dataType: 'json',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                            success: function(data) {
+                                Swal.close();
+                                if (data.status === 200) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Thành công',
+                                        text: data.message,
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        background: swalBg,
+                                        color: swalColor
+                                    }).then(function() {
+                                        window.location.href = '<?php echo BASE_URL; ?>system/users';
+                                    });
+                                } else {
+                                    Swal.fire({ icon: 'error', title: 'Thất bại', text: data.message, background: swalBg, color: swalColor });
+                                }
+                            },
+                            error: function() {
+                                Swal.close();
+                                Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra trong quá trình xử lý.', background: swalBg, color: swalColor });
+                            }
+                        });
+                    });
                 });
             </script>
 

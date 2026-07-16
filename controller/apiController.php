@@ -16,8 +16,9 @@ class apiController extends baseController {
             return;
         }
 
-        // Chỉ cho phép truy cập API khi đã đăng nhập với quyền admin (user_group = 1)
-        if (!session::isLoggedIn() || session::get('user_group') != 1) {
+        // Chỉ cho phép truy cập API khi đã đăng nhập với quyền admin (user_group = 1 hoặc 2)
+        $group = session::get('user_group');
+        if (!session::isLoggedIn() || ($group != 1 && $group != 2)) {
             $this->response(['error' => 'Bạn không có quyền thực hiện hành động này.'], 403);
         }
     }
@@ -1306,6 +1307,304 @@ class apiController extends baseController {
                 'status' => 400,
                 'message' => $e->getMessage()
             ], 400);
+        }
+    }
+
+    /**
+     * API thêm chợ mới (AJAX POST)
+     */
+    public function addMarket() {
+        $this->func->abort405('POST', 'create', 'market');
+        $this->func->abort403(marketService::isSuperAdmin(), 'create', 'market');
+
+        $data = [
+            'market_code'  => trim($_POST['market_code'] ?? ''),
+            'name'         => trim($_POST['name'] ?? ''),
+            'phone'        => trim($_POST['phone'] ?? ''),
+            'email'        => trim($_POST['email'] ?? ''),
+            'manager_name' => trim($_POST['manager_name'] ?? ''),
+            'status_code'  => $_POST['status_code'] ?? 'active'
+        ];
+
+        $validator = new validator();
+        $validator->required('name', $data['name'], 'Tên chợ không được để trống.')
+                  ->required('market_code', $data['market_code'], 'Mã chợ không được để trống.');
+
+        $this->func->abort400($validator, 'create', 'market');
+
+        try {
+            $marketModel = new marketModel();
+            $marketModel->create($data);
+            $this->func->apiResponse('create', 'market', true);
+        } catch (Exception $e) {
+            $this->func->abort500($e, 'create', 'market');
+        }
+    }
+
+    /**
+     * API cập nhật thông tin chợ (AJAX POST)
+     */
+    public function editMarket() {
+        $this->func->abort405('POST', 'update', 'market');
+        $this->func->abort403(marketService::isSuperAdmin(), 'update', 'market');
+        $this->func->abort400('id', 'update', 'market');
+
+        $id = $_POST['id'];
+
+        $data = [
+            'market_code'  => trim($_POST['market_code'] ?? ''),
+            'name'         => trim($_POST['name'] ?? ''),
+            'phone'        => trim($_POST['phone'] ?? ''),
+            'email'        => trim($_POST['email'] ?? ''),
+            'manager_name' => trim($_POST['manager_name'] ?? ''),
+            'status_code'  => $_POST['status_code'] ?? 'active'
+        ];
+
+        $validator = new validator();
+        $validator->required('name', $data['name'], 'Tên chợ không được để trống.')
+                  ->required('market_code', $data['market_code'], 'Mã chợ không được để trống.');
+
+        $this->func->abort400($validator, 'update', 'market');
+
+        try {
+            $marketModel = new marketModel();
+            $marketModel->update($id, $data);
+            $this->func->apiResponse('update', 'market', true);
+        } catch (Exception $e) {
+            $this->func->abort500($e, 'update', 'market');
+        }
+    }
+
+    /**
+     * API xóa chợ (AJAX POST)
+     */
+    public function deleteMarket() {
+        $this->func->abort405('POST', 'delete', 'market');
+        $this->func->abort403(marketService::isSuperAdmin(), 'delete', 'market');
+        $this->func->abort400('id', 'delete', 'market');
+
+        $id = $_POST['id'];
+
+        try {
+            $marketModel = new marketModel();
+            $marketModel->delete($id);
+            $this->func->apiResponse('delete', 'market', true);
+        } catch (Exception $e) {
+            $this->func->abort500($e, 'delete', 'market');
+        }
+    }
+
+    /**
+     * API tạo tài khoản nhân viên mới (AJAX POST)
+     */
+    public function addUser() {
+        $this->func->abort405('POST', 'create', 'user');
+        $this->func->abort403(marketService::isSuperAdmin() || marketService::isAdminMarket(), 'create', 'user');
+
+        $db = database::getInstance();
+        $username = trim($_POST['username'] ?? '');
+        $fullname = trim($_POST['fullname'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $role = $_POST['role'] ?? 'admin';
+        $status = $_POST['status'] ?? 'active';
+        $checkedMarkets = $_POST['markets'] ?? [];
+
+        if (marketService::isAdminMarket() && $role !== 'admin') {
+            $role = 'admin';
+        }
+
+        $isActive = ($status === 'active') ? 1 : 0;
+
+        $validator = new validator();
+        $validator->required('username', $username, 'Vui lòng nhập tên đăng nhập.')
+                  ->required('password', $password, 'Vui lòng nhập mật khẩu.')
+                  ->required('fullname', $fullname, 'Vui lòng nhập họ tên.')
+                  ->email('email', $email, 'Email không đúng định dạng.');
+
+        $this->func->abort400($validator, 'create', 'user');
+
+        try {
+            $userModel = new userModel();
+            $this->func->abort400(!$userModel->getByUsername($username), 'create', 'user', 'Tên đăng nhập đã tồn tại.');
+            if ($email) {
+                $this->func->abort400(!$userModel->getByEmail($email), 'create', 'user', 'Email này đã được đăng ký cho tài khoản khác.');
+            }
+
+            $actor = $db->selectOne("SELECT id FROM system_actors WHERE actor_code = :code", ['code' => $role]);
+            $actorId = $actor ? (int)$actor['id'] : 3;
+
+            $newUserId = $userModel->create([
+                'username' => $username,
+                'password' => $password,
+                'fullname' => $fullname,
+                'email' => $email,
+                'user_group' => ($role === 'super_market') ? 1 : 2,
+                'actor_id' => $actorId,
+                'is_active' => $isActive
+            ]);
+
+            $roleMapping = [
+                'super_market' => 1,
+                'admin_market' => 4,
+                'admin' => 2
+            ];
+            $roleId = $roleMapping[$role] ?? 2;
+
+            if ($role !== 'super_market') {
+                if (marketService::isSuperAdmin()) {
+                    $allowedMarkets = array_column($db->select("SELECT id FROM markets WHERE status_code = 'active'"), 'id');
+                } else {
+                    $managerUserId = session::get('user_id');
+                    $allowedMarkets = array_column($db->select("
+                        SELECT m.id 
+                        FROM user_markets um
+                        JOIN markets m ON um.market_id = m.id
+                        WHERE um.user_id = :manager_id AND m.status_code = 'active'
+                    ", ['manager_id' => $managerUserId]), 'id');
+                }
+
+                foreach ($checkedMarkets as $mId) {
+                    if (in_array((int)$mId, $allowedMarkets)) {
+                        $db->query("
+                            INSERT INTO user_markets (user_id, market_id, role_id)
+                            VALUES (:user_id, :market_id, :role_id)
+                        ", [
+                            'user_id' => $newUserId,
+                            'market_id' => $mId,
+                            'role_id' => $roleId
+                        ]);
+                    }
+                }
+            }
+
+            $this->func->apiResponse('create', 'user', true);
+        } catch (Exception $e) {
+            $this->func->abort500($e, 'create', 'user');
+        }
+    }
+
+    /**
+     * API cập nhật tài khoản nhân viên (AJAX POST)
+     */
+    public function editUser() {
+        $this->func->abort405('POST', 'update', 'user');
+        $this->func->abort403(marketService::isSuperAdmin() || marketService::isAdminMarket(), 'update', 'user');
+        $this->func->abort400('id', 'update', 'user');
+
+        $id = $_POST['id'];
+
+        $db = database::getInstance();
+        $userModel = new userModel();
+
+        $user = $db->selectOne("
+            SELECT u.*, sa.actor_code 
+            FROM users u 
+            LEFT JOIN system_actors sa ON u.actor_id = sa.id 
+            WHERE u.id = :id
+        ", ['id' => $id]);
+
+        $this->func->abort400($user !== null, 'update', 'user', 'Không tìm thấy tài khoản nhân viên.');
+
+        if (!marketService::isSuperAdmin()) {
+            $managerUserId = session::get('user_id');
+            $isAssociated = $db->selectOne("
+                SELECT 1 FROM user_markets 
+                WHERE user_id = :target_id AND market_id IN (
+                    SELECT market_id FROM user_markets WHERE user_id = :manager_id
+                )
+            ", ['target_id' => $id, 'manager_id' => $managerUserId]);
+
+            $this->func->abort403($isAssociated || $user['actor_code'] === 'admin', 'update', 'user', 'Bạn không có quyền chỉnh sửa tài khoản này.');
+        }
+
+        $fullname = trim($_POST['fullname'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $role = $_POST['role'] ?? $user['actor_code'];
+        $status = $_POST['status'] ?? ($user['is_active'] ? 'active' : 'inactive');
+        $checkedMarkets = $_POST['markets'] ?? [];
+
+        if (marketService::isAdminMarket()) {
+            $role = 'admin';
+        }
+
+        $isActive = ($status === 'active') ? 1 : 0;
+
+        $validator = new validator();
+        $validator->required('fullname', $fullname, 'Vui lòng nhập họ tên.')
+                  ->email('email', $email, 'Email không đúng định dạng.');
+
+        $this->func->abort400($validator, 'update', 'user');
+
+        try {
+            $dupUser = $userModel->getByEmail($email);
+            if ($dupUser && $dupUser['id'] != $id) {
+                $this->func->abort400(false, 'update', 'user', 'Email này đã được sử dụng bởi một tài khoản khác.');
+            }
+
+            $actor = $db->selectOne("SELECT id FROM system_actors WHERE actor_code = :code", ['code' => $role]);
+            $actorId = $actor ? (int)$actor['id'] : 3;
+
+            $userModel->update($id, [
+                'fullname' => $fullname,
+                'email' => $email,
+                'user_group' => ($role === 'super_market') ? 1 : 2,
+                'actor_id' => $actorId,
+                'is_active' => $isActive
+            ]);
+
+            if (!empty($password)) {
+                $userModel->updatePassword($id, $password);
+            }
+
+            if (marketService::isSuperAdmin()) {
+                $marketsScopeList = $db->select("SELECT id FROM markets WHERE status_code = 'active'");
+            } else {
+                $managerUserId = session::get('user_id');
+                $marketsScopeList = $db->select("
+                    SELECT m.id 
+                    FROM user_markets um
+                    JOIN markets m ON um.market_id = m.id
+                    WHERE um.user_id = :manager_id AND m.status_code = 'active'
+                ", ['manager_id' => $managerUserId]);
+            }
+            $marketsScopeIds = array_column($marketsScopeList, 'id');
+
+            if (!empty($marketsScopeIds)) {
+                $placeholders = implode(',', array_map(function($i) { return ":m{$i}"; }, range(0, count($marketsScopeIds) - 1)));
+                $deleteParams = ['id' => $id];
+                foreach ($marketsScopeIds as $idx => $mId) {
+                    $deleteParams["m{$idx}"] = $mId;
+                }
+                $db->query("DELETE FROM user_markets WHERE user_id = :id AND market_id IN ($placeholders)", $deleteParams);
+            }
+
+            $roleMapping = [
+                'super_market' => 1,
+                'admin_market' => 4,
+                'admin' => 2
+            ];
+            $roleId = $roleMapping[$role] ?? 2;
+
+            if ($role !== 'super_market') {
+                foreach ($checkedMarkets as $mId) {
+                    if (in_array((int)$mId, $marketsScopeIds)) {
+                        $db->query("
+                            INSERT INTO user_markets (user_id, market_id, role_id)
+                            VALUES (:user_id, :market_id, :role_id)
+                        ", [
+                            'user_id' => $id,
+                            'market_id' => $mId,
+                            'role_id' => $roleId
+                        ]);
+                    }
+                }
+            }
+
+            $this->func->apiResponse('update', 'user', true);
+        } catch (Exception $e) {
+            $this->func->abort500($e, 'update', 'user');
         }
     }
 

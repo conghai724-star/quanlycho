@@ -639,7 +639,7 @@ window.App = Object.assign(window.App || {}, {
                 color: isDark ? '#ffffff' : '#0f1623'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    App.utils.ajaxRequest('POST', 'admin/user_toggle_status/' + id, {}, (res) => {
+                    App.utils.ajaxRequest('POST', 'system/user_toggle_status/' + id, {}, (res) => {
                         if (res.success) {
                             const statusCol = document.getElementById('status-col-' + id);
                             if (res.new_status === 1) {

@@ -11,7 +11,8 @@ class message {
         'contract' => 'hợp đồng',
         'bill'     => 'hóa đơn',
         'appendix' => 'phụ lục',
-        'certificate' => 'giấy tờ/chứng nhận ATTP'
+        'certificate' => 'giấy tờ/chứng nhận ATTP',
+        'market'   => 'chợ'
     ];
 
     private static $actions = [

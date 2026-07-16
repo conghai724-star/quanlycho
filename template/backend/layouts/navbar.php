@@ -23,7 +23,7 @@
     <!-- Actions bên phải -->
     <div class="topbar-right">
         <!-- Bộ chọn chợ nhanh cho BQL -->
-        <?php if (session::get('user_logged_in') && (marketService::isSuperAdmin() || marketService::isAdminMarket())): ?>
+        <?php if (session::get('user_logged_in')): ?>
             <?php
             $db = database::getInstance();
             $accMarkets = marketService::getAccessibleMarketIds();
@@ -32,7 +32,9 @@
             <div class="market-selector-wrapper" style="margin-right: 12px; display: inline-flex; align-items: center; gap: 6px;">
                 <label for="topbar-market-selector" style="font-size: 12px; font-weight: 500; color: var(--text-muted); display: none; @media(min-width:768px){display:inline;}">Chợ đang chọn:</label>
                 <select id="topbar-market-selector" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-surface); color: var(--text-color); font-size: 13px; font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.2s;">
-                    <option value="0" <?php echo ($activeMarketId === 0) ? 'selected' : ''; ?>>📊 Toàn Bộ Hệ Thống (Trang Tổng)</option>
+                    <?php if (marketService::isSuperAdmin() || marketService::isAdminMarket()): ?>
+                        <option value="0" <?php echo ($activeMarketId === 0) ? 'selected' : ''; ?>>📊 Toàn Bộ Hệ Thống (Trang Tổng)</option>
+                    <?php endif; ?>
                     <?php if (!empty($accMarkets)): ?>
                         <?php
                         $marketListObj = $db->select("SELECT id, name FROM markets WHERE id IN (" . implode(',', $accMarkets) . ") AND status_code = 'active' ORDER BY name ASC");
