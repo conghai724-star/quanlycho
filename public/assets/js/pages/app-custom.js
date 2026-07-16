@@ -4,7 +4,7 @@
  * Gom các hàm page-specific vào namespaces để tránh ô nhiễm môi trường global.
  */
 
-window.App = {
+window.App = Object.assign(window.App || {}, {
     // 0. Các hàm tiện ích dùng chung (Utilities)
     utils: {
         /**
@@ -958,7 +958,7 @@ window.App = {
             });
         }
     }
-};
+});
 
 // Global DOM Events & Loading Bar Lifecycle
 (function() {
