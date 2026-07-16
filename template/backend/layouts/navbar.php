@@ -22,7 +22,48 @@
 
     <!-- Actions bên phải -->
     <div class="topbar-right">
-        <!-- Nút bật/tắt Dark Mode (Vanilla JS của Gentelella tự động xử lý lưu localStorage) -->
+        <!-- Bộ chọn chợ nhanh cho BQL -->
+        <?php if (session::get('user_logged_in') && (marketService::isSuperAdmin() || marketService::isAdminMarket())): ?>
+            <?php
+            $db = database::getInstance();
+            $accMarkets = marketService::getAccessibleMarketIds();
+            $activeMarketId = session::get('active_market_id') !== null ? (int)session::get('active_market_id') : 0;
+            ?>
+            <div class="market-selector-wrapper" style="margin-right: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                <label for="topbar-market-selector" style="font-size: 12px; font-weight: 500; color: var(--text-muted); display: none; @media(min-width:768px){display:inline;}">Chợ đang chọn:</label>
+                <select id="topbar-market-selector" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-surface); color: var(--text-color); font-size: 13px; font-weight: 500; cursor: pointer; outline: none; transition: border-color 0.2s;">
+                    <option value="0" <?php echo ($activeMarketId === 0) ? 'selected' : ''; ?>>📊 Toàn Bộ Hệ Thống (Trang Tổng)</option>
+                    <?php if (!empty($accMarkets)): ?>
+                        <?php
+                        $marketListObj = $db->select("SELECT id, name FROM markets WHERE id IN (" . implode(',', $accMarkets) . ") AND status_code = 'active' ORDER BY name ASC");
+                        foreach ($marketListObj as $mObj):
+                        ?>
+                            <option value="<?php echo $mObj['id']; ?>" <?php echo ($activeMarketId === (int)$mObj['id']) ? 'selected' : ''; ?>>
+                                🏪 <?php echo htmlspecialchars($mObj['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+                <script>
+                    document.getElementById('topbar-market-selector').addEventListener('change', function() {
+                        var marketId = this.value;
+                        fetch('<?php echo BASE_URL; ?>api/changeMarketScope?id=' + marketId)
+                            .then(response => response.json())
+                            .then(res => {
+                                if (res.status === 200) {
+                                    // Chuyển về dashboard nếu đang xem các trang cụ thể mà không được quyền
+                                    window.location.href = '<?php echo BASE_URL; ?>admin/dashboard';
+                                } else {
+                                    alert(res.message);
+                                }
+                            })
+                            .catch(() => alert('Không thể kết nối với máy chủ.'));
+                    });
+                </script>
+            </div>
+        <?php endif; ?>
+
+        <!-- Nút bật/tắt Dark Mode -->
         <button class="tb-btn theme-toggle" type="button" title="Chuyển chế độ tối/sáng" aria-label="Toggle theme" aria-pressed="false">
             <svg class="theme-icon-light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
             <svg class="theme-icon-dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>

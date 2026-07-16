@@ -51,8 +51,13 @@
                 <div class="form-group">
                     <label class="form-label" for="role" style="font-weight: 500;">Vai trò hệ thống <span style="color: var(--red)">*</span></label>
                     <select id="role" name="role" class="form-control" required>
-                        <option value="staff" <?php echo ($user['user_group'] == 2) ? 'selected' : ''; ?>>Nhân viên (Thủ quỹ / Kiểm tra)</option>
-                        <option value="admin" <?php echo ($user['user_group'] == 1) ? 'selected' : ''; ?>>Quản trị viên (Admin)</option>
+                        <?php if (marketService::isSuperAdmin()): ?>
+                            <option value="super_market" <?php echo (($user['actor_code'] ?? '') === 'super_market') ? 'selected' : ''; ?>>Quản trị tối cao (Super Admin)</option>
+                            <option value="admin_market" <?php echo (($user['actor_code'] ?? '') === 'admin_market') ? 'selected' : ''; ?>>Quản lý chợ (Market Manager)</option>
+                            <option value="admin" <?php echo (($user['actor_code'] ?? '') === 'admin') ? 'selected' : ''; ?>>Nhân viên vận hành (Staff)</option>
+                        <?php else: ?>
+                            <option value="admin" selected>Nhân viên vận hành (Staff)</option>
+                        <?php endif; ?>
                     </select>
                 </div>
 
@@ -65,6 +70,38 @@
                     </select>
                 </div>
             </div>
+
+            <!-- Danh sách chợ liên kết -->
+            <?php if (!empty($marketsList)): ?>
+                <div id="markets-container" class="form-group" style="margin-bottom: 24px; padding: 16px; background-color: var(--bg-surface-light, #f8f9fa); border: 1px solid var(--border-color); border-radius: 6px;">
+                    <label class="form-label" style="font-weight: 600; margin-bottom: 8px; display: block;">Chọn chợ trực thuộc quản lý <span style="color: var(--red)">*</span></label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 8px;">
+                        <?php foreach ($marketsList as $m): ?>
+                            <?php $checked = in_array((int)$m['id'], $assignedMarkets) ? 'checked' : ''; ?>
+                            <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; color: var(--text-color);">
+                                <input type="checkbox" name="markets[]" value="<?php echo $m['id']; ?>" <?php echo $checked; ?> style="width: 16px; height: 16px; accent-color: var(--primary-color);">
+                                <?php echo htmlspecialchars($m['name']); ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <small style="color: #7f8c8d; margin-top: 8px; display: block;">
+                        <?php echo marketService::isSuperAdmin() ? 'Chọn các chợ gán cho tài khoản Quản lý hoặc Nhân viên.' : 'Nhân viên sẽ chỉ được phân quyền tại các chợ được chọn.'; ?>
+                    </small>
+                </div>
+            <?php endif; ?>
+
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            <script>
+                $(function() {
+                    $('#role').on('change', function() {
+                        if (this.value === 'super_market') {
+                            $('#markets-container').hide().find('input[type="checkbox"]').prop('checked', false);
+                        } else {
+                            $('#markets-container').show();
+                        }
+                    }).trigger('change');
+                });
+            </script>
 
             <hr style="border: 0; border-top: 1px solid var(--border-color-light); margin: 24px 0;">
 

@@ -1021,9 +1021,20 @@ class apiController extends baseController {
      * API Thay đổi active_market_id trong Session (AJAX GET)
      */
     public function changeMarketScope() {
-        $marketId = $_GET['id'] ?? 0;
-        if (!$marketId) {
-            $this->response(['status' => 400, 'message' => 'Thiếu ID chợ.'], 400);
+        $marketId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+
+        // Nếu chuyển về Trang Tổng (id = 0)
+        if ($marketId === 0) {
+            if (marketService::isSuperAdmin() || marketService::isAdminMarket()) {
+                session::set('active_market_id', 0);
+                session::delete('accessible_market_ids');
+                $this->response([
+                    'status' => 200,
+                    'message' => 'Chuyển đổi sang Trang tổng thành công!'
+                ]);
+            } else {
+                $this->response(['status' => 403, 'message' => 'Bạn không có quyền xem Trang tổng hợp.'], 403);
+            }
         }
 
         // Kiểm tra xem user có quyền truy cập chợ này không

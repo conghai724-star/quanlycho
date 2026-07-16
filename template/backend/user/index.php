@@ -44,10 +44,16 @@
                                     <?php echo htmlspecialchars($user['email']); ?>
                                 </td>
                                 <td style="padding: 14px 16px;">
-                                    <?php if ($user['user_group'] == 1): ?>
-                                        <span class="chip" style="background-color: rgba(234, 67, 53, 0.1); color: #EA4335; border: 1px solid rgba(234, 67, 53, 0.2);">Quản trị hệ thống</span>
+                                    <?php 
+                                    $actorCode = $user['actor_code'] ?? 'admin';
+                                    $actorName = $user['actor_name'] ?? 'Nhân viên';
+                                    if ($actorCode === 'super_market'): 
+                                    ?>
+                                        <span class="chip" style="background-color: rgba(234, 67, 53, 0.1); color: #EA4335; border: 1px solid rgba(234, 67, 53, 0.2); font-weight: 600;"><?php echo htmlspecialchars($actorName); ?></span>
+                                    <?php elseif ($actorCode === 'admin_market'): ?>
+                                        <span class="chip" style="background-color: rgba(155, 89, 182, 0.1); color: #9b59b6; border: 1px solid rgba(155, 89, 182, 0.2); font-weight: 600;"><?php echo htmlspecialchars($actorName); ?></span>
                                     <?php else: ?>
-                                        <span class="chip" style="background-color: rgba(66, 133, 244, 0.1); color: #4285F4; border: 1px solid rgba(66, 133, 244, 0.2);">Nhân viên BQL</span>
+                                        <span class="chip" style="background-color: rgba(66, 133, 244, 0.1); color: #4285F4; border: 1px solid rgba(66, 133, 244, 0.2); font-weight: 600;"><?php echo htmlspecialchars($actorName); ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td style="padding: 14px 16px;" id="status-col-<?php echo $user['id']; ?>">

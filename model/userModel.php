@@ -29,7 +29,10 @@ class userModel {
      * Lấy người dùng theo tên đăng nhập
      */
     public function getByUsername($username) {
-        $sql = "SELECT * FROM users WHERE username = :username";
+        $sql = "SELECT u.*, sa.actor_code 
+                FROM users u 
+                LEFT JOIN system_actors sa ON u.actor_id = sa.id 
+                WHERE u.username = :username";
         return $this->db->selectOne($sql, ['username' => $username]);
     }
 
@@ -58,8 +61,8 @@ class userModel {
      * Thêm tài khoản người dùng mới
      */
     public function create($data) {
-        $sql = "INSERT INTO users (username, password, fullname, email, user_group, is_active) 
-                VALUES (:username, :password, :fullname, :email, :user_group, :is_active)";
+        $sql = "INSERT INTO users (username, password, fullname, email, user_group, actor_id, is_active) 
+                VALUES (:username, :password, :fullname, :email, :user_group, :actor_id, :is_active)";
         
         $params = [
             'username'   => $data['username'],
@@ -67,6 +70,7 @@ class userModel {
             'fullname'   => $data['fullname'],
             'email'      => $data['email'] ?? null,
             'user_group' => $data['user_group'] ?? 2,
+            'actor_id'   => $data['actor_id'],
             'is_active'  => $data['is_active'] ?? 1
         ];
 
@@ -79,7 +83,7 @@ class userModel {
      */
     public function update($id, $data) {
         $sql = "UPDATE users 
-                SET fullname = :fullname, email = :email, user_group = :user_group, is_active = :is_active 
+                SET fullname = :fullname, email = :email, user_group = :user_group, actor_id = :actor_id, is_active = :is_active 
                 WHERE id = :id";
         
         $params = [
@@ -87,10 +91,10 @@ class userModel {
             'fullname'   => $data['fullname'],
             'email'      => $data['email'] ?? null,
             'user_group' => $data['user_group'] ?? 2,
+            'actor_id'   => $data['actor_id'],
             'is_active'  => $data['is_active'] ?? 1
         ];
 
-        return $this->db->query($sql, $params);
     }
 
     /**

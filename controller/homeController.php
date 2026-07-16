@@ -50,6 +50,7 @@ class homeController {
                     // ponytail: user_role derived from user_group; role_code column doesn't exist in DB
                     session::set('user_role', $user['user_group'] == 1 ? 'admin' : 'staff');
                     session::set('user_group', $user['user_group']);
+                    session::set('actor_code', $user['actor_code'] ?? 'admin');
 
                     header('Location: ' . BASE_URL . 'admin/dashboard');
                     exit();
