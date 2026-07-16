@@ -99,45 +99,51 @@ class adminController {
             // 1. Tổng số chợ
             $totalMarkets = count($accessibleMarketIds);
             
-            // 2. Tổng số sạp & Số sạp đã thuê
+            // 2. Tổng số sạp & Số sạp đã thuê (Stalls join Areas)
             $stallStats = $db->selectOne("
                 SELECT COUNT(*) as total_stalls,
                        SUM(CASE WHEN ss.code = 'rented' THEN 1 ELSE 0 END) as rented_stalls
                 FROM stalls s
+                JOIN areas a ON s.area_id = a.id
                 JOIN system_statuses ss ON s.status_id = ss.id
-                WHERE s.market_id IN ($marketIdsStr) AND ss.code != '99'
+                WHERE a.market_id IN ($marketIdsStr) AND ss.code != '99'
             ");
             
             $totalStalls = (int)($stallStats['total_stalls'] ?? 0);
             $rentedStalls = (int)($stallStats['rented_stalls'] ?? 0);
             $occupancyRate = $totalStalls > 0 ? round(($rentedStalls / $totalStalls) * 100) : 0;
             
-            // 3. Tổng số tiểu thương đang hoạt động
+            // 3. Tổng số tiểu thương đang hoạt động (Traders join Contracts join Stalls join Areas)
             $traderStats = $db->selectOne("
                 SELECT COUNT(DISTINCT t.id) as total_traders
                 FROM traders t
                 JOIN contracts c ON c.trader_id = t.id
+                JOIN stalls s ON c.stall_id = s.id
+                JOIN areas a ON s.area_id = a.id
                 JOIN system_statuses cs ON c.status_id = cs.id
-                WHERE c.market_id IN ($marketIdsStr) AND cs.code = 'active'
+                WHERE a.market_id IN ($marketIdsStr) AND cs.code = 'active'
             ");
             $totalTraders = (int)($traderStats['total_traders'] ?? 0);
             
-            // 4. Doanh thu tổng hợp tháng này
+            // 4. Doanh thu tổng hợp tháng này (Bills join Contracts join Stalls join Areas)
             $revenueStats = $db->selectOne("
-                SELECT SUM(total_amount) as total_revenue
-                FROM bills
-                WHERE market_id IN ($marketIdsStr) 
-                  AND payment_status = 'paid'
-                  AND billing_cycle = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
+                SELECT SUM(b.total_amount) as total_revenue
+                FROM bills b
+                JOIN contracts c ON b.contract_id = c.id
+                JOIN stalls s ON c.stall_id = s.id
+                JOIN areas a ON s.area_id = a.id
+                WHERE a.market_id IN ($marketIdsStr) 
+                  AND b.status = 'paid'
+                  AND DATE_FORMAT(b.invoice_date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
             ");
             $totalRevenue = (float)($revenueStats['total_revenue'] ?? 0);
             
             // 5. Thống kê từng chợ để vẽ danh sách Grid
             $marketsData = $db->select("
                 SELECT m.id, m.name, m.code,
-                       (SELECT COUNT(*) FROM stalls WHERE market_id = m.id) as total_stalls,
-                       (SELECT COUNT(*) FROM stalls s JOIN system_statuses ss ON s.status_id = ss.id WHERE s.market_id = m.id AND ss.code = 'rented') as rented_stalls,
-                       (SELECT SUM(total_amount) FROM bills WHERE market_id = m.id AND payment_status = 'paid' AND billing_cycle = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')) as monthly_revenue
+                       (SELECT COUNT(*) FROM stalls s JOIN areas a ON s.area_id = a.id WHERE a.market_id = m.id) as total_stalls,
+                       (SELECT COUNT(*) FROM stalls s JOIN areas a ON s.area_id = a.id JOIN system_statuses ss ON s.status_id = ss.id WHERE a.market_id = m.id AND ss.code = 'rented') as rented_stalls,
+                       (SELECT SUM(b.total_amount) FROM bills b JOIN contracts c ON b.contract_id = c.id JOIN stalls s ON c.stall_id = s.id JOIN areas a ON s.area_id = a.id WHERE a.market_id = m.id AND b.status = 'paid' AND DATE_FORMAT(b.invoice_date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')) as monthly_revenue
                 FROM markets m
                 WHERE m.id IN ($marketIdsStr) AND m.status_code = 'active'
             ");
@@ -167,24 +173,30 @@ class adminController {
                    SUM(CASE WHEN ss.code = 'empty' THEN 1 ELSE 0 END) as empty_stalls,
                    SUM(CASE WHEN ss.code = 'repairing' THEN 1 ELSE 0 END) as repairing_stalls
             FROM stalls s
+            JOIN areas a ON s.area_id = a.id
             JOIN system_statuses ss ON s.status_id = ss.id
-            WHERE s.market_id = :market_id AND ss.code != '99'
+            WHERE a.market_id = :market_id AND ss.code != '99'
         ", ['market_id' => $marketId]);
         
         $traderStats = $db->selectOne("
             SELECT COUNT(DISTINCT t.id) as total_traders
             FROM traders t
             JOIN contracts c ON c.trader_id = t.id
+            JOIN stalls s ON c.stall_id = s.id
+            JOIN areas a ON s.area_id = a.id
             JOIN system_statuses cs ON c.status_id = cs.id
-            WHERE c.market_id = :market_id AND cs.code = 'active'
+            WHERE a.market_id = :market_id AND cs.code = 'active'
         ", ['market_id' => $marketId]);
         
         $revenueStats = $db->selectOne("
-            SELECT SUM(total_amount) as total_revenue
-            FROM bills
-            WHERE market_id = :market_id 
-              AND payment_status = 'paid'
-              AND billing_cycle = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
+            SELECT SUM(b.total_amount) as total_revenue
+            FROM bills b
+            JOIN contracts c ON b.contract_id = c.id
+            JOIN stalls s ON c.stall_id = s.id
+            JOIN areas a ON s.area_id = a.id
+            WHERE a.market_id = :market_id 
+              AND b.status = 'paid'
+              AND DATE_FORMAT(b.invoice_date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
         ", ['market_id' => $marketId]);
 
         $stats = [
